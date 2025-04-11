@@ -58,6 +58,34 @@ def send_response(conn, status, message, code=None):
         response["code"] = code
     conn.sendall(json.dumps(response).encode('utf-8'))
 
+# Không nhận được dữ liệu
+if not data:
+    print("[-] Không nhận được dữ liệu")
+    send_response(conn, "error", "No data received", code=400)
+    return
+
+# Dữ liệu không hợp lệ
+except json.JSONDecodeError:
+    print("[-] Dữ liệu không phải JSON hợp lệ")
+    send_response(conn, "error", "Invalid JSON format", code=401)
+    return
+
+# Xác thực sai
+if not auth.verify_token(token):
+    send_response(conn, "auth_failed", "Invalid token", code=403)
+    return
+
+# Payload thiếu
+if not payload:
+    send_response(conn, "error", "Missing payload", code=404)
+    return
+
+# Lưu dữ liệu
+success = database.save_data(payload)
+if success:
+    send_response(conn, "success", "Data saved successfully", code=200)
+else:
+    send_response(conn, "error", "Failed to save data", code=500)
 
 
 
