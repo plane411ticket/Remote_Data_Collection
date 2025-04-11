@@ -1,43 +1,76 @@
 import socket
-import threading
-from database import Database
+import json
+from server import auth, database
 
-# Hàm xử lý kết nối từ client
-db = Database()
-db.create_table()
-db.insert_data(cpu=23.5, ram=60.2)
-db.close()
+HOST = '0.0.0.0'   # lắng nghe tất cả IP
+PORT = 9999        # port server
+
+BUFFER_SIZE = 4096  # kích thước bộ đệm
+
+def handle_client(conn, addr):
+    print(f"[+] Kết nối từ {addr}")
+
+    try:
+        # Bước 1: Nhận dữ liệu JSON
+        data = conn.recv(BUFFER_SIZE).decode('utf-8')
+        if not data:
+            print("[-] Không nhận được dữ liệu")
+            return
+
+        try:
+            json_data = json.loads(data)
+        except json.JSONDecodeError:
+            print("[-] Dữ liệu không phải JSON hợp lệ")
+            conn.sendall(b'Invalid JSON')
+            return
+
+        # Bước 2: Xác thực client (nếu có trường 'token')
+        token = json_data.get('token')
+        if not auth.verify_token(token):  # auth.verify_token là giả định
+            conn.sendall(b'Authentication failed')
+            return
+
+        # Bước 3: Phân tích & xử lý dữ liệu
+        payload = json_data.get('payload')
+        if not payload:
+            conn.sendall(b'Missing payload')
+            return
+
+        # Bước 4: Lưu vào database
+        success = database.save_data(payload)  # database.save_data là giả định
+        if success:
+            conn.sendall(b'ACK')  # Gửi xác nhận
+        else:
+            conn.sendall(b'Database error')
+
+    except Exception as e:
+        print(f"[-] Lỗi: {e}")
+        conn.sendall(b'Server error')
+    finally:
+        conn.close()
+
+def send_response(conn, status, message, code=None):
+    response = {
+        "status": status,
+        "message": message,
+    }
+    if code is not None:
+        response["code"] = code
+    conn.sendall(json.dumps(response).encode('utf-8'))
 
 
-def handle_client(client_socket):
-    request = client_socket.recv(1024)
-    print("Received:", request.decode())
-    
-    # Lấy dữ liệu từ database (ví dụ)
-    db = Database()
-    db_data = db.get_data()
-    
-    # Gửi phản hồi cho client
-    client_socket.send(f"Server received your message. Database data: {db_data}".encode())
-    client_socket.close()
 
-# Mở server để lắng nghe client
+
 def start_server():
-    server_ip = "0.0.0.0"
-    server_port = 5000
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
+        server_socket.bind((HOST, PORT))
+        server_socket.listen()
+        print(f"[+] Server đang lắng nghe tại {HOST}:{PORT}...")
 
-    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_socket.bind((server_ip, server_port))
-    server_socket.listen(5)
-    print(f"Server listening on {server_ip}:{server_port}")
-    
-    while True:
-        client_socket, addr = server_socket.accept()
-        print(f"Accepted connection from {addr}")
-        
-        # Xử lý client trong thread riêng
-        client_thread = threading.Thread(target=handle_client, args=(client_socket,))
-        client_thread.start()
+        while True:
+            conn, addr = server_socket.accept()
+            handle_client(conn, addr)
+
 
 if __name__ == "__main__":
     start_server()
