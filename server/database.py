@@ -12,12 +12,42 @@ class Database:
         )
         self.mycursor = self.mydb.cursor()
 
+    def drop_all_tables(self):
+        self.mycursor.execute("SET FOREIGN_KEY_CHECKS = 0")
+        self.mycursor.execute("SHOW TABLES")
+        tables = self.mycursor.fetchall()
+
+        for table in tables:
+            print(f"🗑️ Đang xóa bảng: {table[0]}")
+            self.mycursor.execute(f"DROP TABLE IF EXISTS `{table[0]}`")
+
+        self.mycursor.execute("SET FOREIGN_KEY_CHECKS = 1")
+
+        self.mydb.commit()
+
     def create_table_user(self):
         self.mycursor.execute("""
-            CREATE TABLE IF NOT EXISTS users_info(
+            CREATE TABLE IF NOT EXISTS computer_info (
                 id INT AUTO_INCREMENT PRIMARY KEY,
-                username VARCHAR(255) NOT NULL,
-                password VARCHAR(255) NOT NULL)""")
+                client_id INT NOT NULL,
+                cpu_brand VARCHAR(255),
+                cpu_arch VARCHAR(50),
+                cpu_bits INT,
+                cpu_logical INT,
+                cpu_physical INT,
+                cpu_usage FLOAT,
+                memory_total BIGINT,
+                memory_available BIGINT,
+                memory_used BIGINT,
+                memory_percent FLOAT,
+                swap_total BIGINT,
+                swap_used BIGINT,
+                swap_percent FLOAT,
+                disk_used BIGINT,
+                disk_free BIGINT,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (client_id) REFERENCES users_info(id)
+            )""")
         self.mydb.commit()
     
     def create_table_client_computer_info(self):
@@ -39,10 +69,33 @@ class Database:
         
         self.mydb.commit()
         
-    def insert_computer_info(self, client_id, cpu_usage, memory_usage, disk_usage, network_usage):
+    # def insert_computer_info(self, client_id, cpu_usage, memory_usage, disk_usage, network_usage):
+    #     self.mycursor.execute("""
+    #         INSERT INTO computer_info (client_id, cpu_usage, memory_usage, disk_usage, network_usage) 
+    #         VALUES (%s, %s, %s, %s, %s)""", (client_id, cpu_usage, memory_usage, disk_usage, network_usage))
+    #     self.mydb.commit()
+
+    def insert_computer_info(self, client_id, data):
+        cpu = data["cpu"]
+        memory = data["memory"]
+        swap = data["swap"]
+        disk = data["disk"][0]
+
         self.mycursor.execute("""
-            INSERT INTO computer_info (client_id, cpu_usage, memory_usage, disk_usage, network_usage) 
-            VALUES (%s, %s, %s, %s, %s)""", (client_id, cpu_usage, memory_usage, disk_usage, network_usage))
+            INSERT INTO computer_info (
+                client_id, cpu_brand, cpu_arch, cpu_bits, cpu_logical, cpu_physical, cpu_usage,
+                memory_total, memory_available, memory_used, memory_percent,
+                swap_total, swap_used, swap_percent,
+                disk_used, disk_free
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """, (
+                client_id,
+                cpu["brand"], cpu["arch"], cpu["bits"], cpu["count_logical"], cpu["count_physical"], cpu["usage_percent"],
+                memory["total"], memory["available"], memory["used"], memory["percent"],
+                swap["total"], swap["used"], swap["percent"],
+                disk["disk_used"], disk["disk_free"]
+            )
+        )
         self.mydb.commit()
 
     def get_all_users(self):
@@ -69,28 +122,31 @@ class Database:
 
     
 
-if __name__ == "__main__":
-    db = Database()
-    db.create_table_user()
-    db.create_table_client_computer_info()
-    print("✅ Đã tạo bảng!")
+# if __name__ == "__main__":
+#     db = Database()
+#     db.drop_all_tables()
+#     print("✅ Đã xóa tất cả bảng!")
+#     db.create_table_user()
+#     db.create_table_client_computer_info()
+#     print("✅ Đã tạo bảng!")
 
-    db.insert_users_info("testuser", "testpass")
-    print("✅ Đã thêm user!")
+#     db.insert_users_info("testuser", "testpass")
+#     print("✅ Đã thêm user!")
 
-    db.insert_computer_info(client_id=1, cpu_usage=55.5, memory_usage=70.2, disk_usage=80.1, network_usage=200.5)
-    print("✅ Đã thêm thông tin máy!")
+#     db.insert_computer_info(client_id=1, cpu_usage=55.5, memory_usage=70.2, disk_usage=80.1, network_usage=200.5)
+#     print("✅ Đã thêm thông tin máy!")
 
-    db.get_all_users()
-    db.get_all_computers_info()
+#     db.get_all_users()
+#     db.get_all_computers_info()
 
-    db.delete_all_computer_info()
-    db.delete_all_users()
+#     db.delete_all_computer_info()
+#     db.delete_all_users()
 
-    print("✅ Đã xóa tất cả người dùng và thông tin máy!")
+#     print("✅ Đã xóa tất cả người dùng và thông tin máy!")
 
-    db.get_all_computers_info()
-    db.get_all_users()
+#     db.get_all_computers_info()
+#     db.get_all_users()
+#     db.close()
 
-    db.close()
+
 
