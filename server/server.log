@@ -183,3 +183,114 @@ Traceback (most recent call last):
     success = database.save_data(payload)
 AttributeError: module 'database' has no attribute 'save_data'
 [2025-04-11 22:51:25,076] [INFO] [Client-127.0.0.1:35584] 127.0.0.1 - Đã đóng kết nối
+[2025-04-14 15:47:08,293] [INFO] [Client-127.0.0.1:54964] Kết nối từ 127.0.0.1
+[2025-04-14 15:47:11,434] [WARNING] [Client-127.0.0.1:54964] 127.0.0.1 - Token không hợp lệ: None
+[2025-04-14 15:47:11,435] [INFO] [Client-127.0.0.1:54964] 127.0.0.1 - Đã đóng kết nối
+[2025-04-14 15:51:51,891] [INFO] [Client-127.0.0.1:55052] Kết nối từ 127.0.0.1
+[2025-04-14 15:51:55,035] [WARNING] [Client-127.0.0.1:55052] 127.0.0.1 - Thiếu payload
+[2025-04-14 15:51:55,036] [INFO] [Client-127.0.0.1:55052] 127.0.0.1 - Đã đóng kết nối
+[2025-04-14 15:53:00,778] [INFO] [Client-127.0.0.1:55062] Kết nối từ 127.0.0.1
+[2025-04-14 15:53:03,964] [ERROR] [Client-127.0.0.1:55062] 127.0.0.1 - Lỗi xử lý
+Traceback (most recent call last):
+  File "E:\Year02_SemesterII\Lap_trinh_mang_can_ban\Project\Remote_Data_Collection\server\main_server.py", line 65, in handle_client
+    success = database.save_data(payload)
+              ^^^^^^^^^^^^^^^^^^
+AttributeError: module 'database' has no attribute 'save_data'
+[2025-04-14 15:53:03,968] [INFO] [Client-127.0.0.1:55062] 127.0.0.1 - Đã đóng kết nối
+[2025-04-14 15:59:45,956] [INFO] [Client-127.0.0.1:55182] Kết nối từ 127.0.0.1
+[2025-04-14 15:59:49,034] [WARNING] [Client-127.0.0.1:55182] 127.0.0.1 - Không nhận được dữ liệu
+[2025-04-14 15:59:49,035] [INFO] [Client-127.0.0.1:55182] 127.0.0.1 - Đã đóng kết nối
+[2025-04-14 16:00:04,215] [INFO] [Client-127.0.0.1:55185] Kết nối từ 127.0.0.1
+[2025-04-14 16:00:07,365] [ERROR] [Client-127.0.0.1:55185] 127.0.0.1 - Lỗi xử lý
+Traceback (most recent call last):
+  File "E:\Year02_SemesterII\Lap_trinh_mang_can_ban\Project\Remote_Data_Collection\server\main_server.py", line 65, in handle_client
+    success = database.insert_computer_info(payload)
+              ^^^^^^^^^^^^^^^^^^
+AttributeError: module 'database' has no attribute 'save_data'
+[2025-04-14 16:00:07,384] [INFO] [Client-127.0.0.1:55185] 127.0.0.1 - Đã đóng kết nối
+[2025-04-14 16:00:54,959] [INFO] [Client-127.0.0.1:55194] Kết nối từ 127.0.0.1
+[2025-04-14 16:00:58,133] [ERROR] [Client-127.0.0.1:55194] 127.0.0.1 - Lỗi xử lý
+Traceback (most recent call last):
+  File "E:\Year02_SemesterII\Lap_trinh_mang_can_ban\Project\Remote_Data_Collection\server\main_server.py", line 65, in handle_client
+    success = database.insert_computer_info(payload)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'database' has no attribute 'insert_computer_info'
+[2025-04-14 16:00:58,136] [INFO] [Client-127.0.0.1:55194] 127.0.0.1 - Đã đóng kết nối
+[2025-04-14 16:02:05,006] [INFO] [Client-127.0.0.1:55208] Kết nối từ 127.0.0.1
+[2025-04-14 16:02:08,128] [ERROR] [Client-127.0.0.1:55208] 127.0.0.1 - Lỗi xử lý
+Traceback (most recent call last):
+  File "E:\Year02_SemesterII\Lap_trinh_mang_can_ban\Project\Remote_Data_Collection\server\main_server.py", line 65, in handle_client
+    success = Database.insert_computer_info(payload)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: Database.insert_computer_info() missing 2 required positional arguments: 'client_id' and 'data'
+[2025-04-14 16:02:08,130] [INFO] [Client-127.0.0.1:55208] 127.0.0.1 - Đã đóng kết nối
+[2025-04-14 16:03:42,766] [INFO] [Client-127.0.0.1:55226] Kết nối từ 127.0.0.1
+[2025-04-14 16:03:45,860] [ERROR] [Client-127.0.0.1:55226] 127.0.0.1 - Lỗi xử lý
+Traceback (most recent call last):
+  File "E:\Year02_SemesterII\Lap_trinh_mang_can_ban\Project\Remote_Data_Collection\server\main_server.py", line 66, in handle_client
+    success = Database.insert_computer_info(client_id, payload)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: Database.insert_computer_info() missing 1 required positional argument: 'data'
+[2025-04-14 16:03:45,862] [INFO] [Client-127.0.0.1:55226] 127.0.0.1 - Đã đóng kết nối
+[2025-04-14 16:06:59,307] [INFO] [Client-127.0.0.1:55287] Kết nối từ 127.0.0.1
+[2025-04-14 16:07:02,377] [ERROR] [Client-127.0.0.1:55287] 127.0.0.1 - Lỗi xử lý
+Traceback (most recent call last):
+  File "E:\Year02_SemesterII\Lap_trinh_mang_can_ban\Project\Remote_Data_Collection\server\main_server.py", line 66, in handle_client
+    success = Database.insert_computer_info(client_id, payload)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: Database.insert_computer_info() missing 1 required positional argument: 'payload'
+[2025-04-14 16:07:02,380] [INFO] [Client-127.0.0.1:55287] 127.0.0.1 - Đã đóng kết nối
+[2025-04-14 16:09:01,936] [INFO] [Client-127.0.0.1:55326] Kết nối từ 127.0.0.1
+[2025-04-14 16:09:06,189] [ERROR] [Client-127.0.0.1:55326] 127.0.0.1 - Lỗi xử lý
+Traceback (most recent call last):
+  File "C:\Users\Dell\AppData\Local\Programs\Python\Python312\Lib\site-packages\mysql\connector\connection_cext.py", line 755, in cmd_query
+    self._cmysql.query(
+_mysql_connector.MySQLInterfaceError: Unknown column 'cpu_brand' in 'field list'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "E:\Year02_SemesterII\Lap_trinh_mang_can_ban\Project\Remote_Data_Collection\server\main_server.py", line 67, in handle_client
+    success = db.insert_computer_info(client_id, payload)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Year02_SemesterII\Lap_trinh_mang_can_ban\Project\Remote_Data_Collection\server\database.py", line 84, in insert_computer_info
+    self.mycursor.execute("""
+  File "C:\Users\Dell\AppData\Local\Programs\Python\Python312\Lib\site-packages\mysql\connector\cursor_cext.py", line 351, in execute
+    self._connection.cmd_query(
+  File "C:\Users\Dell\AppData\Local\Programs\Python\Python312\Lib\site-packages\mysql\connector\opentelemetry\context_propagation.py", line 97, in wrapper
+    return method(cnx, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dell\AppData\Local\Programs\Python\Python312\Lib\site-packages\mysql\connector\connection_cext.py", line 763, in cmd_query
+    raise get_mysql_exception(
+mysql.connector.errors.ProgrammingError: 1054 (42S22): Unknown column 'cpu_brand' in 'field list'
+[2025-04-14 16:09:06,290] [INFO] [Client-127.0.0.1:55326] 127.0.0.1 - Đã đóng kết nối
+[2025-04-14 16:16:23,542] [INFO] [Client-127.0.0.1:55446] Kết nối từ 127.0.0.1
+[2025-04-14 16:16:27,276] [ERROR] [Client-127.0.0.1:55446] 127.0.0.1 - Lỗi xử lý
+Traceback (most recent call last):
+  File "C:\Users\Dell\AppData\Local\Programs\Python\Python312\Lib\site-packages\mysql\connector\connection_cext.py", line 755, in cmd_query
+    self._cmysql.query(
+_mysql_connector.MySQLInterfaceError: Cannot add or update a child row: a foreign key constraint fails (`railway`.`computer_info`, CONSTRAINT `computer_info_ibfk_1` FOREIGN KEY (`client_id`) REFERENCES `users_info` (`id`))
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "E:\Year02_SemesterII\Lap_trinh_mang_can_ban\Project\Remote_Data_Collection\server\main_server.py", line 67, in handle_client
+    success = db.insert_computer_info(client_id, payload)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Year02_SemesterII\Lap_trinh_mang_can_ban\Project\Remote_Data_Collection\server\database.py", line 81, in insert_computer_info
+    self.mycursor.execute("""
+  File "C:\Users\Dell\AppData\Local\Programs\Python\Python312\Lib\site-packages\mysql\connector\cursor_cext.py", line 351, in execute
+    self._connection.cmd_query(
+  File "C:\Users\Dell\AppData\Local\Programs\Python\Python312\Lib\site-packages\mysql\connector\opentelemetry\context_propagation.py", line 97, in wrapper
+    return method(cnx, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dell\AppData\Local\Programs\Python\Python312\Lib\site-packages\mysql\connector\connection_cext.py", line 763, in cmd_query
+    raise get_mysql_exception(
+mysql.connector.errors.IntegrityError: 1452 (23000): Cannot add or update a child row: a foreign key constraint fails (`railway`.`computer_info`, CONSTRAINT `computer_info_ibfk_1` FOREIGN KEY (`client_id`) REFERENCES `users_info` (`id`))
+[2025-04-14 16:16:27,300] [INFO] [Client-127.0.0.1:55446] 127.0.0.1 - Đã đóng kết nối
+[2025-04-14 16:18:02,665] [INFO] [Client-127.0.0.1:55466] Kết nối từ 127.0.0.1
+[2025-04-14 16:18:06,419] [ERROR] [Client-127.0.0.1:55466] 127.0.0.1 - Lỗi lưu vào database
+[2025-04-14 16:18:06,420] [INFO] [Client-127.0.0.1:55466] 127.0.0.1 - Đã đóng kết nối
+[2025-04-14 16:20:29,514] [INFO] [Client-127.0.0.1:55508] Kết nối từ 127.0.0.1
+[2025-04-14 16:20:33,469] [INFO] [Client-127.0.0.1:55508] 127.0.0.1 - Lưu dữ liệu thành công
+[2025-04-14 16:20:33,470] [INFO] [Client-127.0.0.1:55508] 127.0.0.1 - Đã đóng kết nối

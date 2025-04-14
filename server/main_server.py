@@ -2,21 +2,24 @@ import socket
 import json
 import threading
 import logging
-import database
+from database import Database
 import auth
+import sys
+import io
 
 
 HOST = '0.0.0.0'
 PORT = 9999
 BUFFER_SIZE = 4096
 
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 # Cấu hình ghi log
 logging.basicConfig(
     level=logging.INFO,
     format='[%(asctime)s] [%(levelname)s] [%(threadName)s] %(message)s',
     handlers=[
-        logging.FileHandler("server.log"),   # Ghi ra file
-        logging.StreamHandler()              # In ra terminal
+        logging.FileHandler("server.log", encoding='utf-8'),   # Ghi ra file
+        logging.StreamHandler(sys.stdout)             # In ra terminal
     ]
 )
 
@@ -54,12 +57,14 @@ def handle_client(conn, addr):
             return
 
         payload = json_data.get('payload')
+        client_id = json_data.get('client_id')
         if not payload:
             logging.warning(f"{client_ip} - Thiếu payload")
             send_response(conn, "error", "Missing payload", code=404)
             return
 
-        success = database.save_data(payload)
+        db = Database()
+        success = db.insert_computer_info(client_id, payload)
         if success:
             logging.info(f"{client_ip} - Lưu dữ liệu thành công")
             send_response(conn, "success", "Data saved successfully", code=200)
