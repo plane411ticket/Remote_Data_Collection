@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Remote Data Collection{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1>Dashboard</h1>
+        <p>Welcome, {{ session.username }}!</p>
+        
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h3>Your Computer Information</h3>
+            </div>
+            <div class="card-body">
+                {% if computer_data %}
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>CPU Usage</th>
+                                    <th>Memory Usage</th>
+                                    <th>Disk Used/Free</th>
+                                    <th>CPU Info</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for data in computer_data %}
+                                <tr>
+                                    <td>{{ data.timestamp }}</td>
+                                    <td>{{ data.cpu_usage }}%</td>
+                                    <td>{{ (data.memory_percent)|round(2) }}% <br>
+                                        <small>{{ (data.memory_used / 1024 / 1024)|round(2) }} MB / 
+                                              {{ (data.memory_total / 1024 / 1024)|round(2) }} MB</small>
+                                    </td>
+                                    <td>
+                                        Used: {{ (data.disk_used / 1024 / 1024 / 1024)|round(2) }} GB <br>
+                                        Free: {{ (data.disk_free / 1024 / 1024 / 1024)|round(2) }} GB
+                                    </td>
+                                    <td>
+                                        {{ data.cpu_brand }}<br>
+                                        <small>{{ data.cpu_logical }} logical cores, {{ data.cpu_arch }} {{ data.cpu_bits }}-bit</small>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="alert alert-info">
+                        No computer data found for your account. Please run the client application to collect data.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
