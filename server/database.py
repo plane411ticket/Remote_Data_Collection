@@ -147,6 +147,3 @@ class Database:
 #     db.get_all_computers_info()
 #     db.get_all_users()
 #     db.close()
-
-
-
