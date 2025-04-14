@@ -17,38 +17,42 @@ def collect_system_info():
         disk_total_free += usage.free
 
     data = {
-        "cpu": {
-            "brand": cpu_info.get("brand_raw"),
-            "arch": cpu_info.get("arch"),
-            "bits": cpu_info.get("bits"),
-            "count_logical": psutil.cpu_count(logical=True),
-            "count_physical": psutil.cpu_count(logical=False),
-            "usage_percent": psutil.cpu_percent(interval=1),
+        "payload": 
+        {
+            "cpu": {
+                "brand": cpu_info.get("brand_raw"),
+                "arch": cpu_info.get("arch"),
+                "bits": cpu_info.get("bits"),
+                "count_logical": psutil.cpu_count(logical=True),
+                "count_physical": psutil.cpu_count(logical=False),
+                "usage_percent": psutil.cpu_percent(interval=1),
+            },
+            "memory": {
+                "total": psutil.virtual_memory().total,
+                "available": psutil.virtual_memory().available,
+                "used": psutil.virtual_memory().used,
+                "percent": psutil.virtual_memory().percent,
+            },
+            "swap": {
+                "total": psutil.swap_memory().total,
+                "used": psutil.swap_memory().used,
+                "percent": psutil.swap_memory().percent,
+            },
+            "disk":
+                {
+                    "disk_used": disk_total_used,
+                    "disk_free": disk_total_free,
+            },
         },
-        "memory": {
-            "total": psutil.virtual_memory().total,
-            "available": psutil.virtual_memory().available,
-            "used": psutil.virtual_memory().used,
-            "percent": psutil.virtual_memory().percent,
-        },
-        "swap": {
-            "total": psutil.swap_memory().total,
-            "used": psutil.swap_memory().used,
-            "percent": psutil.swap_memory().percent,
-        },
-        "disk": [
-            {
-                "disk_used": disk_total_used,
-                "disk_free": disk_total_free,
-            }
-        ],
+        "token": "123456", 
+        "client_id": "123456", 
     }
     return data
 
 
 def connect_to_server():
     # Địa chỉ IP và cổng của server
-    server_ip = "172.17.19.239" # Địa chỉ IP của Laptop đang chạy
+    server_ip = "127.0.0.1" # Địa chỉ IP của Laptop đang chạy
     port = 9999
 
     try:
