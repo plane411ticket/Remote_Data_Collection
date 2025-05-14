@@ -74,10 +74,9 @@ def dynamic_system_info():
                 "used": psutil.swap_memory().used,
                 "percent": psutil.swap_memory().percent,
             },
-            "disk":
-                {
-                    "disk_used": disk_total_used,
-                    "disk_free": disk_total_free,
+            "disk":{
+                "disk_used": disk_total_used,
+                "disk_free": disk_total_free,
             },
             "MAC":
             {
