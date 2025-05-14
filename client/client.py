@@ -36,6 +36,10 @@ def static_system_info():
             "MAC":
             {
                 "mac_address": mac,            
+            },
+            "dynamic":
+            {
+                "dynamic": False,
             }
         },
     }
@@ -78,6 +82,10 @@ def dynamic_system_info():
             "MAC":
             {
                 "mac_address": mac,            
+            },
+            "dynamic":
+            {
+                "dynamic": True,
             }
         },
     }
@@ -103,7 +111,7 @@ def connect_to_server():
         # Gửi lần đầu tiên
         cpu_info = static_system_info()
         payload = json.dumps(cpu_info)
-        client_socket.sendall(payload.encode('utf-8'))
+        client_socket.sendall((payload + '\n').encode('utf-8'))
         print("Đã gửi thông tin lần đầu tới server!")
 
         while True:
@@ -112,7 +120,7 @@ def connect_to_server():
 
             # Gửi dữ liệu dạng JSON
             payload = json.dumps(cpu_info)
-            client_socket.sendall(payload.encode('utf-8'))
+            client_socket.sendall((payload + '\n').encode('utf-8'))
             print("Đã gửi thông tin CPU tới server!")
             time.sleep(5)
 
