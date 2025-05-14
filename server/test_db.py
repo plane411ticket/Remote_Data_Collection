@@ -2,11 +2,11 @@ import mysql.connector
 
 try:
     conn = mysql.connector.connect(
-        host="mainline.proxy.rlwy.net",
-        port=23149,
+        host="localhost",
+        port=3306,
         user="root",
-        password="uPilDXhcwYNlYwvcUACLfFgSOJwiGCaW",
-        database="railway"
+        password="",
+        database="remote_collection"
     )
     if conn.is_connected():
         print("✅ Kết nối thành công với database!")

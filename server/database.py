@@ -14,7 +14,7 @@ class Database:
             host="localhost",
             port=3306,
             user="root",
-            password="nndd411",
+            password="",
         )
 
         self.mycursor = self.mydb.cursor()
@@ -135,28 +135,8 @@ class Database:
 
 if __name__ == "__main__":
     db = Database()
-    # db.create_table_user()
-    # db.create_table_client_computer_info()
-    # db.drop_all_tables()
-    # print("✅ Đã xóa tất cả bảng!")
-    # db.create_table_user()
-    # db.create_table_client_computer_info()
-    # print("✅ Đã tạo bảng!")
-
-    # db.insert_users_info("testuser", "testpass")
-    # print("✅ Đã thêm user!")
-
-    # db.insert_computer_info(client_id=1, cpu_usage=55.5, memory_usage=70.2, disk_usage=80.1, network_usage=200.5)
-    # print("✅ Đã thêm thông tin máy!")
-
-    # db.get_all_users()
-
-    # db.delete_all_computer_info()
-    # db.delete_all_users()
-
-    # print("✅ Đã xóa tất cả người dùng và thông tin máy!")
-
-    db.get_all_computers_info()
-    db.get_all_users()
+    db.create_table_user()
+    db.create_table_client_computer_info()
+    
     db.close()
 
