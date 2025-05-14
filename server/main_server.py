@@ -1,5 +1,6 @@
 # import socket
-# import json
+# import ssl
+import json
 # import threading
 # import logging
 # from database import Database
@@ -97,28 +98,43 @@
 #         conn.close()
 #         logging.info(f"{client_ip} - Đã đóng kết nối")
 
-# def start_server():
-#     context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-#     context.load_cert_chain(certfile="cert.pem", keyfile="key.pem")
-#     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
-#         server_socket.bind((HOST, PORT))
-#         server_socket.listen()
-#         print(f"[+] Server đang lắng nghe tại {HOST}:{PORT}...")
+def start_server():
+<<<<<<< HEAD
+    # Cấu hình SSL
+    context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+    context.load_cert_chain(certfile='server.crt', keyfile='server.key')
 
-#         while True:
-#             conn, addr = server_socket.accept()
-#             try:
-#                 ssl_conn = context.wrap_socket(conn, server_side=True)
-#             except ssl.SSLError as e:
-#                 logging.error(f"Lỗi SSL: {e}")
-#                 conn.close()
-#                 continue
-#             # Tạo thread riêng cho mỗi client
-#             client_thread = threading.Thread(
-#                 target=handle_client, 
-#                 args=(ssl_conn, addr),
-#                 name=f"Client-{addr[0]}:{addr[1]}"
-#             )
+
+=======
+    context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+    context.load_cert_chain(certfile="cert.pem", keyfile="key.pem")
+>>>>>>> e988f1873375f47e11d85f4ac9364aa1c76a4055
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
+        server_socket.bind((HOST, PORT))
+        server_socket.listen()
+        print(f"[+] Server đang lắng nghe tại {HOST}:{PORT}...")
+
+        while True:
+            conn, addr = server_socket.accept()
+<<<<<<< HEAD
+
+            # Wrap connection with SSL
+            conn = context.wrap_socket(conn, server_side=True)
+            
+=======
+            try:
+                ssl_conn = context.wrap_socket(conn, server_side=True)
+            except ssl.SSLError as e:
+                logging.error(f"Lỗi SSL: {e}")
+                conn.close()
+                continue
+>>>>>>> e988f1873375f47e11d85f4ac9364aa1c76a4055
+            # Tạo thread riêng cho mỗi client
+            client_thread = threading.Thread(
+                target=handle_client, 
+                args=(ssl_conn, addr),
+                name=f"Client-{addr[0]}:{addr[1]}"
+            )
 
 #             client_thread.start()
 
