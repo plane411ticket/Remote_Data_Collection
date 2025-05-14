@@ -69,11 +69,11 @@ def handle_client(conn, addr):
 
                 db = Database()
                 if not db.has_static_data(mac_address):  
-                    db.save_static_data(mac_address, payload)
+                    db.insert_static_computer_info(mac_address, payload)
                     logging.info(f"{client_ip} - Lưu dữ liệu static thành công")
                     send_response(conn, "success", "Data saved successfully", code=200)
                 else:
-                    db.save_dynamic_data(mac_address, payload)
+                    db.insert_static_computer_info(mac_address, payload)
                     logging.info(f"{client_ip} - Lưu dynamic data thành công")
                     send_response(conn, "success", "Data saved successfully", code=200)
 

@@ -306,3 +306,6 @@ mysql.connector.errors.IntegrityError: 1452 (23000): Cannot add or update a chil
 [2025-05-12 23:33:25,539] [INFO] [Client-127.0.0.1:65192] Kết nối từ 127.0.0.1
 [2025-05-12 23:33:28,704] [INFO] [Client-127.0.0.1:65192] 127.0.0.1 - Lưu dữ liệu thành công
 [2025-05-12 23:33:28,705] [INFO] [Client-127.0.0.1:65192] 127.0.0.1 - Đã đóng kết nối
+[2025-05-14 15:56:45,723] [ERROR] [MainThread] Lỗi SSL: [SSL: HTTP_REQUEST] http request (_ssl.c:1007)
+[2025-05-14 15:56:46,822] [ERROR] [MainThread] Lỗi SSL: [SSL: HTTP_REQUEST] http request (_ssl.c:1007)
+[2025-05-14 15:56:46,823] [ERROR] [MainThread] Lỗi SSL: [SSL: HTTP_REQUEST] http request (_ssl.c:1007)

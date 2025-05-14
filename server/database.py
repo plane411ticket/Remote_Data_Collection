@@ -14,7 +14,7 @@ class Database:
             host="localhost",
             port=3306,
             user="root",
-            password="nndd411",
+            password="1161944565K",
         )
 
         self.mycursor = self.mydb.cursor()
@@ -157,6 +157,11 @@ class Database:
     def close(self):
         self.mydb.close()
         self.mycursor.close()  
+
+    def has_static_data(self, mac_address):
+        self.mycursor.execute("SELECT * FROM static_info WHERE mac_address = %s", (mac_address,))
+        result = self.mycursor.fetchone()
+        return result is not None
 
 if __name__ == "__main__":
     db = Database()
