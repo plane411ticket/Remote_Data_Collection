@@ -37,10 +37,6 @@ def handle_client(conn, addr):
     client_ip = addr[0]
     logging.info(f"Kết nối từ {client_ip}")
     # static_saved = False
-# def handle_client(conn, addr):
-#     client_ip = addr[0]
-#     logging.info(f"Kết nối từ {client_ip}")
-#     static_saved = False
 
 #     try:
 #         buffer = ""
