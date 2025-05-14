@@ -43,8 +43,6 @@ def static_system_info():
 
 
 def dynamic_system_info():  
-    cpu_info = cpuinfo.get_cpu_info()
-
     disk_partitions = psutil.disk_partitions()
     disk_total_used = 0
     disk_total_free = 0
