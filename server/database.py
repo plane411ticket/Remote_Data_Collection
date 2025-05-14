@@ -3,14 +3,24 @@ import mysql.connector
 
 class Database:
     def __init__(self):
+        # self.mydb = mysql.connector.connect(
+        #     host="mainline.proxy.rlwy.net",
+        #     port=23149,
+        #     user="root",
+        #     password="uPilDXhcwYNlYwvcUACLfFgSOJwiGCaW",
+        #     database = 'railway'
+        # )
         self.mydb = mysql.connector.connect(
-            host="mainline.proxy.rlwy.net",
-            port=23149,
+            host="localhost",
+            port=3306,
             user="root",
-            password="uPilDXhcwYNlYwvcUACLfFgSOJwiGCaW",
-            database = 'railway'
+            password="nndd411",
         )
+
         self.mycursor = self.mydb.cursor()
+
+        self.mycursor.execute("CREATE DATABASE IF NOT EXISTS remote_collection")
+        self.mydb.database = 'remote_collection'
 
     def drop_all_tables(self):
         self.mycursor.execute("SET FOREIGN_KEY_CHECKS = 0")
@@ -125,26 +135,28 @@ class Database:
 
 if __name__ == "__main__":
     db = Database()
-#     db.drop_all_tables()
-#     print("✅ Đã xóa tất cả bảng!")
-#     db.create_table_user()
-#     db.create_table_client_computer_info()
-#     print("✅ Đã tạo bảng!")
+    # db.create_table_user()
+    # db.create_table_client_computer_info()
+    # db.drop_all_tables()
+    # print("✅ Đã xóa tất cả bảng!")
+    # db.create_table_user()
+    # db.create_table_client_computer_info()
+    # print("✅ Đã tạo bảng!")
 
-#     db.insert_users_info("testuser", "testpass")
-#     print("✅ Đã thêm user!")
+    # db.insert_users_info("testuser", "testpass")
+    # print("✅ Đã thêm user!")
 
-#     db.insert_computer_info(client_id=1, cpu_usage=55.5, memory_usage=70.2, disk_usage=80.1, network_usage=200.5)
-#     print("✅ Đã thêm thông tin máy!")
+    # db.insert_computer_info(client_id=1, cpu_usage=55.5, memory_usage=70.2, disk_usage=80.1, network_usage=200.5)
+    # print("✅ Đã thêm thông tin máy!")
 
-#     db.get_all_users()
+    # db.get_all_users()
+
+    # db.delete_all_computer_info()
+    # db.delete_all_users()
+
+    # print("✅ Đã xóa tất cả người dùng và thông tin máy!")
+
     db.get_all_computers_info()
+    db.get_all_users()
+    db.close()
 
-#     db.delete_all_computer_info()
-#     db.delete_all_users()
-
-#     print("✅ Đã xóa tất cả người dùng và thông tin máy!")
-
-#     db.get_all_computers_info()
-#     db.get_all_users()
-#     db.close()
