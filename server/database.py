@@ -14,7 +14,7 @@ class Database:
             host="localhost",
             port=3306,
             user="root",
-            password="",
+            password="nndd411",
         )
 
         self.mycursor = self.mydb.cursor()
@@ -47,8 +47,8 @@ class Database:
     
     def create_static_computer_info(self):
         self.mycursor.execute("""
-            CREATE TABLE IF NOT EXISTS static_info (
-                id INT AUTO_INCREMENT PRIMARY KEY,                 
+            CREATE TABLE IF NOT EXISTS static_info (                
+                mac_address BIGINT UNSIGNED PRIMARY KEY,
                 cpu_brand VARCHAR(255),
                 cpu_arch VARCHAR(50),
                 cpu_bits INT,
@@ -56,7 +56,6 @@ class Database:
                 cpu_physical INT,
                 memory_total BIGINT,
                 swap_total BIGINT,
-                mac_address BIGINT,
                 timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )""")
         self.mydb.commit()
@@ -64,7 +63,7 @@ class Database:
     def create_dynamic_computer_info(self):
         self.mycursor.execute("""
             CREATE TABLE IF NOT EXISTS dynamic_info (
-                id INT AUTO_INCREMENT PRIMARY KEY,
+                mac_address BIGINT UNSIGNED PRIMARY KEY,
                 cpu_usage FLOAT,
                 memory_available BIGINT,
                 memory_used BIGINT,
@@ -73,7 +72,6 @@ class Database:
                 swap_percent FLOAT,
                 disk_used BIGINT,
                 disk_free BIGINT,
-                mac_address BIGINT,
                 timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (mac_address) REFERENCES static_info(mac_address)
             )""")
