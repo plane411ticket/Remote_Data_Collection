@@ -427,3 +427,7 @@ Cookie: ra_login=vietkhai@nhom03.nt106%2Cen; RASession=ZXBoZm5maWVmdmliZHVieXJzb
 
 [2025-05-14 12:28:23,918] [INFO] [Client-127.0.0.1:60964] 127.0.0.1 - Đã đóng kết nối
 [2025-05-14 12:28:24,169] [INFO] [Client-127.0.0.1:60970] Kết nối từ 127.0.0.1
+[2025-05-14 12:30:12,050] [WARNING] [Client-127.0.0.1:60970] 127.0.0.1 - Không nhận được dữ liệu
+[2025-05-14 12:30:12,050] [WARNING] [Client-127.0.0.1:60954] 127.0.0.1 - Không nhận được dữ liệu
+[2025-05-14 12:30:12,051] [INFO] [Client-127.0.0.1:60970] 127.0.0.1 - Đã đóng kết nối
+[2025-05-14 12:30:12,051] [INFO] [Client-127.0.0.1:60954] 127.0.0.1 - Đã đóng kết nối
