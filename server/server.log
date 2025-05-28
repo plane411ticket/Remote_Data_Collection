@@ -309,3 +309,28 @@ mysql.connector.errors.IntegrityError: 1452 (23000): Cannot add or update a chil
 [2025-05-14 15:56:45,723] [ERROR] [MainThread] Lỗi SSL: [SSL: HTTP_REQUEST] http request (_ssl.c:1007)
 [2025-05-14 15:56:46,822] [ERROR] [MainThread] Lỗi SSL: [SSL: HTTP_REQUEST] http request (_ssl.c:1007)
 [2025-05-14 15:56:46,823] [ERROR] [MainThread] Lỗi SSL: [SSL: HTTP_REQUEST] http request (_ssl.c:1007)
+[2025-05-14 16:15:17,641] [ERROR] [MainThread] Lỗi SSL: [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1007)
+[2025-05-14 16:15:17,644] [ERROR] [MainThread] Lỗi SSL: [SSL: HTTP_REQUEST] http request (_ssl.c:1007)
+[2025-05-14 16:15:17,645] [ERROR] [MainThread] Lỗi SSL: [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1007)
+[2025-05-14 16:15:22,026] [ERROR] [MainThread] Lỗi SSL: [SSL: HTTP_REQUEST] http request (_ssl.c:1007)
+[2025-05-14 16:15:22,673] [ERROR] [MainThread] Lỗi SSL: [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1007)
+[2025-05-14 16:15:22,673] [ERROR] [MainThread] Lỗi SSL: [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1007)
+[2025-05-14 16:15:29,783] [ERROR] [MainThread] Lỗi SSL: [SSL: HTTP_REQUEST] http request (_ssl.c:1007)
+[2025-05-14 16:15:59,792] [ERROR] [MainThread] Lỗi SSL: [SSL: HTTP_REQUEST] http request (_ssl.c:1007)
+[2025-05-14 16:15:59,793] [ERROR] [MainThread] Lỗi SSL: [SSL: HTTP_REQUEST] http request (_ssl.c:1007)
+[2025-05-14 16:15:59,803] [INFO] [Client-127.0.0.1:42560] Kết nối từ 127.0.0.1
+[2025-05-14 16:16:00,117] [ERROR] [MainThread] Lỗi SSL: [SSL: HTTP_REQUEST] http request (_ssl.c:1007)
+[2025-05-14 16:16:01,795] [INFO] [Client-127.0.0.1:42560] 127.0.0.1 - Lưu dữ liệu static thành công
+[2025-05-14 16:16:02,734] [ERROR] [Client-127.0.0.1:42560] 127.0.0.1 - Lỗi xử lý
+Traceback (most recent call last):
+  File "/home/khai_11/network_programming/Remote_Data_Collection/server/main_server.py", line 76, in handle_client
+    db.insert_static_computer_info(mac_address, payload)
+  File "/home/khai_11/network_programming/Remote_Data_Collection/server/database.py", line 99, in insert_static_computer_info
+    cpu["brand"], cpu["arch"], cpu["bits"], cpu["count_logical"], cpu["count_physical"], memory["total"], swap["total"]
+KeyError: 'brand'
+[2025-05-14 16:16:02,737] [INFO] [Client-127.0.0.1:42560] 127.0.0.1 - Đã đóng kết nối
+[2025-05-14 16:17:00,069] [ERROR] [MainThread] Lỗi SSL: [SSL: HTTP_REQUEST] http request (_ssl.c:1007)
+[2025-05-14 16:17:00,392] [ERROR] [MainThread] Lỗi SSL: [SSL: HTTP_REQUEST] http request (_ssl.c:1007)
+[2025-05-14 16:23:25,087] [ERROR] [MainThread] Lỗi SSL: [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1007)
+[2025-05-14 16:23:25,088] [ERROR] [MainThread] Lỗi SSL: [SSL: HTTP_REQUEST] http request (_ssl.c:1007)
+[2025-05-14 16:23:25,088] [ERROR] [MainThread] Lỗi SSL: [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1007)

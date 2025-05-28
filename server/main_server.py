@@ -7,6 +7,7 @@ from database import Database
 import ssl
 import sys
 import io
+import queue
 
 
 HOST = '0.0.0.0'
@@ -24,6 +25,18 @@ logging.basicConfig(
     ]
 )
 
+# Hàng đợi để truyền kết nối cho thread giao diện admin
+client_queue = queue.Queue()
+
+ADMIN_COMMANDS = [
+    {"command": "shutdown"},
+    {"command": "restart"},
+    {"command": "screenshot"},
+    {"command": "end_process"},
+    {"suggestion": "RAM nên nâng cấp"},
+    {"suggestion": "Máy bạn không phù hợp chạy song song Dual Boot"}
+]
+
 def send_response(conn, status, message, code=None):
     response = {
         "status": status,
@@ -33,10 +46,26 @@ def send_response(conn, status, message, code=None):
         response["code"] = code
     conn.sendall(json.dumps(response).encode('utf-8'))
 
+
+def send_command(conn, command, suggestion=None):
+    message = {"command": command}
+    if suggestion:
+        message["suggestion"] = suggestion
+    try:
+        conn.sendall((json.dumps(message) + "\n").encode('utf-8'))
+        logging.info(f"Đã gửi lệnh tới client: {message}")
+    except Exception as e:
+        logging.error(f"Lỗi khi gửi lệnh: {e}")
+
+
 def handle_client(conn, addr):
     client_ip = addr[0]
     logging.info(f"Kết nối từ {client_ip}")
     # static_saved = False
+
+
+    client_queue.put(conn)  # Đẩy kết nối vào hàng đợi để giao diện sử dụng
+
 
     try:
         buffer = ""
@@ -72,11 +101,58 @@ def handle_client(conn, addr):
                     db.insert_static_computer_info(mac_address, payload)
                     logging.info(f"{client_ip} - Lưu dữ liệu static thành công")
                     send_response(conn, "success", "Data saved successfully", code=200)
+
+                    memory_total = payload.get("memory", {}).get("total", 0)
+                    if memory_total <= 8 * 1024**3:  # <= 8GB
+                        send_command(conn, suggestion="Máy bạn không phù hợp chạy song song Dual Boot")
+
+                    swap_total = payload.get("swap", {}).get("total", 0)  
+                    if swap_total <= 4 * 1024**3:  # <= 4GB
+                        send_command(conn, suggestion="Dung lượng swap quá thấp! Cần nâng cấp swap partition")
+
                 else:
                     db.insert_static_computer_info(mac_address, payload)
                     logging.info(f"{client_ip} - Lưu dynamic data thành công")
                     send_response(conn, "success", "Data saved successfully", code=200)
+                
 
+                    # Kiểm tra hiệu năng vượt ngưỡng
+                    cpu = payload.get("cpu", {}).get("usage_percent", 0)
+                       
+                    if cpu > 50:
+                        send_command(conn, suggestion="Cảnh báo: CPU đang vượt ngưỡng sử dụng!")
+                    if cpu > 70:
+                        send_command(conn, suggestion="Cảnh báo: CPU sắp quá tải! Cần đóng ứng dụng không cần thiết!")
+                    if cpu > 80:
+                        send_command(conn, command="restart", suggestion="Cảnh báo: CPU đang quá tải, Cần restart máy!")
+                    if cpu > 90:
+                        send_command(conn, command="shutdown", suggestion="Cảnh báo: CPU đang quá tải, Cần shutdown máy!")
+
+
+                    ram_percent = payload.get("memory", {}).get("percent", 0)
+                    if ram_percent > 50:
+                        send_command(conn, suggestion="Cảnh báo: RAM đang vượt ngưỡng sử dụng!")
+                    if ram_percent > 70:
+                        send_command(conn, suggestion="Cảnh báo: RAM sắp quá tải! Cần đóng ứng dụng không cần thiết!")
+                    if ram_percent > 80:
+                        send_command(conn, command="restart", suggestion="Cảnh báo: RAM đang quá tải, Cần restart máy!")
+                    if ram_percent > 90:
+                        send_command(conn, command="shutdown", suggestion="Cảnh báo: RAM đang quá tải, Cần shutdown máy!")
+
+                    
+                    swap_percent = payload.get("swap", {}).get("percent", 0)
+
+                    if swap_percent > 50:
+                        send_command(conn, suggestion="Cảnh báo: SWAP đang vượt ngưỡng sử dụng!")
+                    if swap_percent > 70:
+                        send_command(conn, suggestion="Cảnh báo: SWAP sắp quá tải! Cần đóng ứng dụng không cần thiết!")
+                    if swap_percent > 80:
+                        send_command(conn, command="restart", suggestion="Cảnh báo: SWAP đang quá tải, Cần restart máy!")
+                    if swap_percent > 90:
+                        send_command(conn, command="shutdown", suggestion="Cảnh báo: SWAP đang quá tải, Cần shutdown máy!")
+
+
+                
 
     except Exception as e:
         logging.exception(f"{client_ip} - Lỗi xử lý")
@@ -85,6 +161,25 @@ def handle_client(conn, addr):
     finally:
         conn.close()
         logging.info(f"{client_ip} - Đã đóng kết nối")
+
+
+
+def admin_interface():
+    while True:
+        conn = client_queue.get()  # Lấy kết nối client đầu tiên
+        print("\n[ADMIN] Có client kết nối. Bạn muốn gửi gì?")
+        for idx, cmd in enumerate(ADMIN_COMMANDS):
+            label = cmd.get("command") or cmd.get("suggestion")
+            print(f"[{idx}] {label}")
+
+        try:
+            choice = int(input("Nhập số để gửi lệnh: "))
+            selected = ADMIN_COMMANDS[choice]
+            send_command(conn, selected.get("command"), selected.get("suggestion"))
+        except (ValueError, IndexError):
+            logging.warning("Lựa chọn không hợp lệ hoặc lỗi nhập.")
+
+
 
 def start_server():
     context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)

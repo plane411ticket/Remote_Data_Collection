@@ -21,7 +21,8 @@ ENV/
 
 # Log files
 *.log
-logs/
+server/server.log
+
 
 # Database
 *.db
