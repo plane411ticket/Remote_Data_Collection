@@ -98,7 +98,9 @@ def handle_client(conn, addr):
 
                 db = Database()
                 if not db.has_static_data(mac_address):  
+                    print("insert_static_computer_info",payload )
                     db.insert_static_computer_info(mac_address, payload)
+                    db.insert_static_info_history(mac_address, payload)
                     logging.info(f"{client_ip} - Lưu dữ liệu static thành công")
                     send_response(conn, "success", "Data saved successfully", code=200)
 
@@ -111,7 +113,8 @@ def handle_client(conn, addr):
                         send_command(conn, suggestion="Dung lượng swap quá thấp! Cần nâng cấp swap partition")
 
                 else:
-                    db.insert_static_computer_info(mac_address, payload)
+                    print("insert_dynamic_computer_info",payload )
+                    db.insert_dynamic_computer_info(mac_address, payload)
                     logging.info(f"{client_ip} - Lưu dynamic data thành công")
                     send_response(conn, "success", "Data saved successfully", code=200)
                 

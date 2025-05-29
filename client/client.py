@@ -63,7 +63,7 @@ def dynamic_system_info():
         {
             "cpu": 
             {
-                "usage_percent": psutil.cpu_percent(interval=1),
+                "cpu_usage": psutil.cpu_percent(interval=1),
             },
             "memory": {
                 "available": psutil.virtual_memory().available,
