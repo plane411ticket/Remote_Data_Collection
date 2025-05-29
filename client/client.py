@@ -37,10 +37,7 @@ def static_system_info():
             {
                 "mac_address": mac,            
             },
-            "dynamic":
-            {
-                "dynamic": False,
-            }
+            "type": "static"
         },
     }
     return data
@@ -82,13 +79,11 @@ def dynamic_system_info():
             {
                 "mac_address": mac,            
             },
-            "dynamic":
-            {
-                "dynamic": True,
-            }
+            "type": "dynamic"
         },
     }
     return data
+
 
 def connect_to_server():
     # Địa chỉ IP và cổng của server
@@ -111,7 +106,13 @@ def connect_to_server():
         cpu_info = static_system_info()
         payload = json.dumps(cpu_info)
         client_socket.sendall((payload + '\n').encode('utf-8'))
+        receive_data = receive_response(client_socket)
         print("Đã gửi thông tin lần đầu tới server!")
+
+        if receive_data.get("status") == "ignore":
+             print("Server đã có static info, bỏ qua.")
+        else:
+            print("Server chấp nhận static info.")
 
         while True:
             # Thu thập thông tin CPU
@@ -128,6 +129,17 @@ def connect_to_server():
 
     finally:
         client_socket.close()
+
+def receive_response(conn):
+    buffer =""
+    while(True):
+        data = conn.recv(4096).decode("utf-8")
+        buffer += data
+        print(buffer)
+        if("\n" in buffer):
+            line, _ = buffer.split("\n", 1)
+            return json.loads(line)
+
 
 if __name__ == "__main__":
     connect_to_server()

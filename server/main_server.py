@@ -44,7 +44,7 @@ def send_response(conn, status, message, code=None):
     }
     if code is not None:
         response["code"] = code
-    conn.sendall(json.dumps(response).encode('utf-8'))
+    conn.sendall((json.dumps(response) + "\n").encode('utf-8'))
 
 
 def send_command(conn, command, suggestion=None):
@@ -95,24 +95,28 @@ def handle_client(conn, addr):
                     continue
                 
                 mac_address = payload.get("MAC", {}).get("mac_address", "unknown")
+                data_type = payload.get("type", "unknown")
 
                 db = Database()
-                if not db.has_static_data(mac_address):  
-                    print("insert_static_computer_info",payload )
-                    db.insert_static_computer_info(mac_address, payload)
-                    db.insert_static_info_history(mac_address, payload)
-                    logging.info(f"{client_ip} - Lưu dữ liệu static thành công")
-                    send_response(conn, "success", "Data saved successfully", code=200)
+                if data_type == "static":
+                    if not db.has_static_data(mac_address):  
+                            print("insert_static_computer_info",payload )
+                            db.insert_static_computer_info(mac_address, payload)
+                            logging.info(f"{client_ip} - Lưu dữ liệu static thành công")
+                            send_response(conn, "success", "Data saved successfully", code=200)
 
-                    memory_total = payload.get("memory", {}).get("total", 0)
-                    if memory_total <= 8 * 1024**3:  # <= 8GB
-                        send_command(conn, suggestion="Máy bạn không phù hợp chạy song song Dual Boot")
+                            memory_total = payload.get("memory", {}).get("total", 0)
+                            if memory_total <= 8 * 1024**3:  # <= 8GB
+                                send_command(conn, command="alert", suggestion="Máy bạn không phù hợp chạy song song Dual Boot")
 
-                    swap_total = payload.get("swap", {}).get("total", 0)  
-                    if swap_total <= 4 * 1024**3:  # <= 4GB
-                        send_command(conn, suggestion="Dung lượng swap quá thấp! Cần nâng cấp swap partition")
+                            swap_total = payload.get("swap", {}).get("total", 0)  
+                            if swap_total <= 4 * 1024**3:  # <= 4GB
+                                send_command(conn, command="alert", suggestion="Dung lượng swap quá thấp! Cần nâng cấp swap partition")
+                    else:
+                        logging.info(f"{mac_address} - Static data đã có, bỏ qua gói static")
+                        send_response(conn, "ignore", "Static already exists", code=208)
 
-                else:
+                elif data_type == "dynamic":
                     print("insert_dynamic_computer_info",payload )
                     db.insert_dynamic_computer_info(mac_address, payload)
                     logging.info(f"{client_ip} - Lưu dynamic data thành công")
@@ -123,9 +127,9 @@ def handle_client(conn, addr):
                     cpu = payload.get("cpu", {}).get("usage_percent", 0)
                        
                     if cpu > 50:
-                        send_command(conn, suggestion="Cảnh báo: CPU đang vượt ngưỡng sử dụng!")
+                        send_command(conn, command="notify", suggestion="Cảnh báo: CPU đang vượt ngưỡng sử dụng!")
                     if cpu > 70:
-                        send_command(conn, suggestion="Cảnh báo: CPU sắp quá tải! Cần đóng ứng dụng không cần thiết!")
+                        send_command(conn, command="alert", suggestion="Cảnh báo: CPU sắp quá tải! Cần đóng ứng dụng không cần thiết!")
                     if cpu > 80:
                         send_command(conn, command="restart", suggestion="Cảnh báo: CPU đang quá tải, Cần restart máy!")
                     if cpu > 90:
@@ -134,9 +138,9 @@ def handle_client(conn, addr):
 
                     ram_percent = payload.get("memory", {}).get("percent", 0)
                     if ram_percent > 50:
-                        send_command(conn, suggestion="Cảnh báo: RAM đang vượt ngưỡng sử dụng!")
+                        send_command(conn, command="notify", suggestion="Cảnh báo: RAM đang vượt ngưỡng sử dụng!")
                     if ram_percent > 70:
-                        send_command(conn, suggestion="Cảnh báo: RAM sắp quá tải! Cần đóng ứng dụng không cần thiết!")
+                        send_command(conn, command="alert", suggestion="Cảnh báo: RAM sắp quá tải! Cần đóng ứng dụng không cần thiết!")
                     if ram_percent > 80:
                         send_command(conn, command="restart", suggestion="Cảnh báo: RAM đang quá tải, Cần restart máy!")
                     if ram_percent > 90:
@@ -146,13 +150,16 @@ def handle_client(conn, addr):
                     swap_percent = payload.get("swap", {}).get("percent", 0)
 
                     if swap_percent > 50:
-                        send_command(conn, suggestion="Cảnh báo: SWAP đang vượt ngưỡng sử dụng!")
+                        send_command(conn, command="notify", suggestion="Cảnh báo: SWAP đang vượt ngưỡng sử dụng!")
                     if swap_percent > 70:
-                        send_command(conn, suggestion="Cảnh báo: SWAP sắp quá tải! Cần đóng ứng dụng không cần thiết!")
+                        send_command(conn, command="alert", suggestion="Cảnh báo: SWAP sắp quá tải! Cần đóng ứng dụng không cần thiết!")
                     if swap_percent > 80:
                         send_command(conn, command="restart", suggestion="Cảnh báo: SWAP đang quá tải, Cần restart máy!")
                     if swap_percent > 90:
                         send_command(conn, command="shutdown", suggestion="Cảnh báo: SWAP đang quá tải, Cần shutdown máy!")
+                else:
+                    logging.warning(f"{mac_address} - Gói tin không hợp lệ: thiếu type")
+                    send_response(conn, "error", "Invalid data type", code=400)
 
 
                 

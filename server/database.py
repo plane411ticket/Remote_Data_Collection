@@ -61,21 +61,21 @@ class Database:
             )""")
         self.mydb.commit()
     
-    def create_static_info_history (self):
-        self.mycursor.execute("""
-            CREATE TABLE IF NOT EXISTS static_info_history (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                mac_address BIGINT UNSIGNED,          
-                cpu_brand VARCHAR(255),
-                cpu_arch VARCHAR(50),
-                cpu_bits INT,
-                cpu_logical INT,
-                cpu_physical INT,
-                memory_total BIGINT,
-                swap_total BIGINT,
-                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )""")
-        self.mydb.commit()
+    # def create_static_info_history (self):
+    #     self.mycursor.execute("""
+    #         CREATE TABLE IF NOT EXISTS static_info_history (
+    #             id INT AUTO_INCREMENT PRIMARY KEY,
+    #             mac_address BIGINT UNSIGNED,          
+    #             cpu_brand VARCHAR(255),
+    #             cpu_arch VARCHAR(50),
+    #             cpu_bits INT,
+    #             cpu_logical INT,
+    #             cpu_physical INT,
+    #             memory_total BIGINT,
+    #             swap_total BIGINT,
+    #             timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    #         )""")
+    #     self.mydb.commit()
 
 
     def create_dynamic_computer_info(self):
@@ -123,26 +123,26 @@ class Database:
         except mysql.connector.Error as err:
             return False  
         
-    def insert_static_info_history(self, mac_address, payload):
-        try:
-            cpu = payload["cpu"]
-            memory = payload["memory"]
-            swap = payload["swap"]
+    # def insert_static_info_history(self, mac_address, payload):
+    #     try:
+    #         cpu = payload["cpu"]
+    #         memory = payload["memory"]
+    #         swap = payload["swap"]
 
-            self.mycursor.execute("""
-                INSERT INTO static_info_history (
-                    mac_address, cpu_brand, cpu_arch, cpu_bits, cpu_logical, cpu_physical, 
-                    memory_total, swap_total
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                """, (
-                    mac_address,
-                    cpu["brand"], cpu["arch"], cpu["bits"], cpu["count_logical"], cpu["count_physical"], memory["total"], swap["total"]
-                )
-            )
-            self.mydb.commit()
-            return True
-        except mysql.connector.Error as err:
-            return False  
+    #         self.mycursor.execute("""
+    #             INSERT INTO static_info_history (
+    #                 mac_address, cpu_brand, cpu_arch, cpu_bits, cpu_logical, cpu_physical, 
+    #                 memory_total, swap_total
+    #             ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+    #             """, (
+    #                 mac_address,
+    #                 cpu["brand"], cpu["arch"], cpu["bits"], cpu["count_logical"], cpu["count_physical"], memory["total"], swap["total"]
+    #             )
+    #         )
+    #         self.mydb.commit()
+    #         return True
+    #     except mysql.connector.Error as err:
+    #         return False  
     
     def insert_dynamic_computer_info(self, mac_address, payload):
         try:
@@ -202,6 +202,11 @@ class Database:
         self.mycursor.execute("SELECT * FROM static_info WHERE mac_address = %s", (mac_address,))
         result = self.mycursor.fetchone()
         return result is not None
+    
+    def has_dynamic_data(self, mac_address):
+        self.mycursor.execute("SELECT * FROM dynamic_info WHERE mac_address = %s", (mac_address,))
+        result = self.mycursor.fetchone()
+        return result is not None
 
 if __name__ == "__main__":
     db = Database()
@@ -209,7 +214,6 @@ if __name__ == "__main__":
     db.create_table_user()
     db.create_static_computer_info()
     db.create_dynamic_computer_info()
-    db.create_static_info_history()
     
     db.close()
 
