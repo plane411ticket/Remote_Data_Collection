@@ -9,11 +9,18 @@ import sys
 import io
 import queue
 import os
+import argparse
 
-PORT = int(os.getenv("SERVER_PORT", 9999))
 
 
 HOST = '0.0.0.0'
+parser = argparse.ArgumentParser(description="Run multi-port server")
+parser.add_argument('--port', type=int, default=9999, help='Port to listen on')
+args = parser.parse_args()
+PORT = args.port
+
+
+# PORT = int(os.getenv("SERVER_PORT", 9999))
 # PORT = 9999
 BUFFER_SIZE = 4096
 
