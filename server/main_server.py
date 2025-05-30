@@ -8,10 +8,11 @@ import ssl
 import sys
 import io
 import queue
+import os
 
-
+PORT = int(os.getenv("SERVER_PORT", 9999))
 HOST = '0.0.0.0'
-PORT = 9999
+# PORT = 9999
 BUFFER_SIZE = 4096
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
