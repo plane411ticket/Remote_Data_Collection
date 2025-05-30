@@ -11,9 +11,18 @@ import queue
 import os
 
 PORT = int(os.getenv("SERVER_PORT", 9999))
+
+
 HOST = '0.0.0.0'
 # PORT = 9999
 BUFFER_SIZE = 4096
+
+# HOST = '0.0.0.0'
+# parser = argparse.ArgumentParser()
+# parser.add_argument('--port', type=int, default=9999)
+# args = parser.parse_args()
+# PORT = args.port
+# BUFFER_SIZE = 4096
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 # Cấu hình ghi log
@@ -74,15 +83,16 @@ def handle_client(conn, addr):
             data = conn.recv(BUFFER_SIZE).decode('utf-8')
             if not data:
                 logging.warning(f"{client_ip} - Không nhận được dữ liệu")
-                send_response(conn, "error", "No data received", code=400)
+                # send_response(conn, "error", "No data received", code=400)
                 return
 
             buffer += data
+            db = Database()
             while '\n' in buffer:
                 line, buffer = buffer.split('\n', 1)
 
                 try:
-                    json_data = json.loads(data)
+                    json_data = json.loads(line)
                 except json.JSONDecodeError:
                     logging.warning(f"{client_ip} - JSON không hợp lệ: {line}")
                     send_response(conn, "error", "Invalid JSON format", code=401)
@@ -98,7 +108,6 @@ def handle_client(conn, addr):
                 mac_address = payload.get("MAC", {}).get("mac_address", "unknown")
                 data_type = payload.get("type", "unknown")
 
-                db = Database()
                 if data_type == "static":
                     if not db.has_static_data(mac_address):  
                             print("insert_static_computer_info",payload )
@@ -219,4 +228,7 @@ def start_server():
             client_thread.start()
 
 if __name__ == "__main__":
-    start_server()
+    try:
+        start_server()
+    except KeyboardInterrupt:
+        print("Server đã tắt.")
