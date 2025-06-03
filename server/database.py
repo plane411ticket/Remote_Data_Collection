@@ -14,7 +14,7 @@ class Database:
             host="localhost",
             port=3306,
             user="root",
-            password="1161944565K",
+            password="nndd411",
         )
 
         self.mycursor = self.mydb.cursor()

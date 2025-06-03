@@ -150,6 +150,7 @@ import time
 import json
 import psutil
 import cpuinfo
+import os
 
 
 def static_system_info():
@@ -227,6 +228,29 @@ def receive_response(conn):
             line, _ = buffer.split("\n", 1)
             return json.loads(line)
 
+def listen_to_server(client_socket):
+    try:
+        response = receive_response(client_socket)
+        if response.get("status") == "ignore":
+            print("[INFO] Server đã có static info, bỏ qua.")
+        elif response.get("status") == "error":
+            print(f"[ERROR] Có lỗi xảy ra: {response.get('message')}")
+        elif response.get("status") == "success":
+            print("[INFO] Server chấp nhận client info.")
+        elif response.get("command") == "shutdown":
+            print("[SHUTDOWN] Máy sẽ tắt sau 5 giây.")
+            time.sleep(100)
+            os.system("shutdown /s /t 0")
+        elif response.get("command") == "restart":
+            print("[RESTART] Máy sẽ khởi động lại sau 5 giây.")
+            time.sleep(100)
+            os.system("shutdown /r /t 0") 
+        elif response.get("command") == "alert":
+            print(f"[ALERT] {response.get('suggestion')}")
+        elif response.get("command") == "notify":
+            print(f"[NOTIFY] {response.get('suggestion')}")
+    except Exception as e:
+        print(f"[LỖI] không nhận được phản hồi hợp lệ từ server: {e}")
 
 def connect_to_server():
     server_ip = "127.0.0.1"
@@ -245,16 +269,13 @@ def connect_to_server():
                 # Gửi thông tin hệ thống tĩnh (static)
                 static_info = static_system_info()
                 client_socket.sendall((json.dumps(static_info) + '\n').encode('utf-8'))
-                response = receive_response(client_socket)
-                if response.get("status") == "ignore":
-                    print("[INFO] Server đã có static info, bỏ qua.")
-                else:
-                    print("[INFO] Server chấp nhận static info.")
-
+                listen_to_server(client_socket)
+                
                 # Gửi định kỳ thông tin động (dynamic)
                 while True:
                     dyn_info = dynamic_system_info()
                     client_socket.sendall((json.dumps(dyn_info) + '\n').encode('utf-8'))
+                    listen_to_server(client_socket)
                     print("[>] Đã gửi dynamic info.")
                     time.sleep(5)
 
