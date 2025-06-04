@@ -1,39 +1,62 @@
-# Python bytecode
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
 
 # Distribution / packaging
-dist/
 build/
+dist/
 *.egg-info/
 
 # Virtual environments
 venv/
 env/
 ENV/
+.venv/
 
-# IDE specific files
+# IDE/editor
 .idea/
 .vscode/
 *.swp
 *.swo
+.vs/
 
-# Log files
+# Logs
 *.log
 server/server.log
-
+logs/
 
 # Database
 *.db
 *.sqlite3
+*.sql.backup
 
-# Environment variables
+# Environment/config
 .env
+.env.local
+config.ini
 
-# OS specific files
-.DS_Store
-Thumbs.db
-
+# SSL certificates
 cert.pem
 key.pem
+*.crt
+*.key
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Project specific
+central_server/__pycache__/
+client/__pycache__/
+server/__pycache__/
+temp/
+backup/

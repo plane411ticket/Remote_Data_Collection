@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from sklearn.tree import DecisionTreeRegressor
-from database import Database
+from database.database import Database
 
 class AIPredictor:
     def __init__(self):
