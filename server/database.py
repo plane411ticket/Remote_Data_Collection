@@ -21,6 +21,7 @@ class Database:
 
         self.mycursor.execute("CREATE DATABASE IF NOT EXISTS remote_collection")
         self.mydb.database = 'remote_collection'
+        self.mydb.commit()
 
     def drop_all_tables(self):
         self.mycursor.execute("SET FOREIGN_KEY_CHECKS = 0")
@@ -171,6 +172,12 @@ class Database:
         self.mycursor.execute("SELECT * FROM users_info")
         for row in self.mycursor.fetchall():
             print(row)
+
+
+    def get_all(self):
+        self.mycursor.execute("SELECT user, host FROM mysql.user")
+        for row in self.mycursor.fetchall():
+            print(row)
             
     def get_all_static_info(self):
         self.mycursor.execute("SELECT * FROM static_info")
@@ -210,10 +217,11 @@ class Database:
 
 if __name__ == "__main__":
     db = Database()
-    db.drop_all_tables()
+    # db.drop_all_tables()
     db.create_table_user()
     db.create_static_computer_info()
     db.create_dynamic_computer_info()
+    db.get_all()
     
     db.close()
 

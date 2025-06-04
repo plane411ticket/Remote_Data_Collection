@@ -5,7 +5,7 @@ try:
         host="localhost",
         port=3306,
         user="root",
-        password="",
+        password="1161944565K",
         database="remote_collection"
     )
     if conn.is_connected():

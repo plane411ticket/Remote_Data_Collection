@@ -13,6 +13,7 @@ import argparse
 
 
 
+
 HOST = '0.0.0.0'
 parser = argparse.ArgumentParser(description="Run multi-port server")
 parser.add_argument('--port', type=int, default=9999, help='Port to listen on')
@@ -142,38 +143,44 @@ def handle_client(conn, addr):
 
                     # Kiểm tra hiệu năng vượt ngưỡng
                     cpu = payload.get("cpu", {}).get("usage_percent", 0)
-                       
-                    if cpu > 50:
-                        send_command(conn, command="notify", suggestion="Cảnh báo: CPU đang vượt ngưỡng sử dụng!")
-                    if cpu > 70:
-                        send_command(conn, command="alert", suggestion="Cảnh báo: CPU sắp quá tải! Cần đóng ứng dụng không cần thiết!")
-                    if cpu > 80:
-                        send_command(conn, command="restart", suggestion="Cảnh báo: CPU đang quá tải, Cần restart máy!")
+                    
                     if cpu > 90:
                         send_command(conn, command="shutdown", suggestion="Cảnh báo: CPU đang quá tải, Cần shutdown máy!")
+                    elif cpu > 80:
+                        send_command(conn, command="restart", suggestion="Cảnh báo: CPU đang quá tải, Cần restart máy!")
+                    elif cpu > 70:
+                        send_command(conn, command="alert", suggestion="Cảnh báo: CPU sắp quá tải! Cần đóng ứng dụng không cần thiết!")
+                    elif cpu > 50:
+                        send_command(conn, command="notify", suggestion="Cảnh báo: CPU đang vượt ngưỡng sử dụng!")
+                    
+                    
 
 
                     ram_percent = payload.get("memory", {}).get("percent", 0)
-                    if ram_percent > 50:
-                        send_command(conn, command="notify", suggestion="Cảnh báo: RAM đang vượt ngưỡng sử dụng!")
-                    if ram_percent > 70:
-                        send_command(conn, command="alert", suggestion="Cảnh báo: RAM sắp quá tải! Cần đóng ứng dụng không cần thiết!")
-                    if ram_percent > 80:
-                        send_command(conn, command="restart", suggestion="Cảnh báo: RAM đang quá tải, Cần restart máy!")
                     if ram_percent > 90:
                         send_command(conn, command="shutdown", suggestion="Cảnh báo: RAM đang quá tải, Cần shutdown máy!")
-
+                    elif ram_percent > 80:
+                        send_command(conn, command="restart", suggestion="Cảnh báo: RAM đang quá tải, Cần restart máy!")
+                    elif ram_percent > 70:
+                        send_command(conn, command="alert", suggestion="Cảnh báo: RAM sắp quá tải! Cần đóng ứng dụng không cần thiết!")
+                    elif ram_percent > 50:
+                        send_command(conn, command="notify", suggestion="Cảnh báo: RAM đang vượt ngưỡng sử dụng!")
+                    
+                   
                     
                     swap_percent = payload.get("swap", {}).get("percent", 0)
 
-                    if swap_percent > 50:
-                        send_command(conn, command="notify", suggestion="Cảnh báo: SWAP đang vượt ngưỡng sử dụng!")
-                    if swap_percent > 70:
-                        send_command(conn, command="alert", suggestion="Cảnh báo: SWAP sắp quá tải! Cần đóng ứng dụng không cần thiết!")
-                    if swap_percent > 80:
-                        send_command(conn, command="restart", suggestion="Cảnh báo: SWAP đang quá tải, Cần restart máy!")
                     if swap_percent > 90:
                         send_command(conn, command="shutdown", suggestion="Cảnh báo: SWAP đang quá tải, Cần shutdown máy!")
+                    elif swap_percent > 80:
+                        send_command(conn, command="restart", suggestion="Cảnh báo: SWAP đang quá tải, Cần restart máy!")
+                    if swap_percent > 70:
+                        send_command(conn, command="alert", suggestion="Cảnh báo: SWAP sắp quá tải! Cần đóng ứng dụng không cần thiết!")
+                    elif swap_percent > 50:
+                        send_command(conn, command="notify", suggestion="Cảnh báo: SWAP đang vượt ngưỡng sử dụng!")
+                    
+                    
+                    
                 else:
                     logging.warning(f"{mac_address} - Gói tin không hợp lệ: thiếu type")
                     send_response(conn, "error", "Invalid data type", code=400)
@@ -208,6 +215,9 @@ def admin_interface():
 
 
 
+
+
+
 def start_server():
     context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
     context.load_cert_chain(certfile="cert.pem", keyfile="key.pem")
@@ -236,6 +246,8 @@ def start_server():
 
 if __name__ == "__main__":
     try:
+        
         start_server()
+       
     except KeyboardInterrupt:
         print("Server đã tắt.")
