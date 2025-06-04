@@ -44,6 +44,29 @@ class Database:
                 password VARCHAR(255) NOT NULL
             )""")
         self.mydb.commit()
+
+    def create_table_server_log(self):
+        self.mycursor.execute("""
+            CREATE TABLE IF NOT EXISTS server_logs (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                address VARCHAR(255) NOT NULL,
+                log_message TEXT,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )""")
+        self.mydb.commit()
+    
+    def create_table_alerts(self):
+        self.mycursor.execute("""
+            CREATE TABLE IF NOT EXISTS alerts (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                mac_address BIGINT UNSIGNED,         -- Foreign key to static_info   
+                alert_type VARCHAR(50) NOT NULL,    -- Type of alert (e.g., cpu, memory, disk)
+                alert_level VARCHAR(20) NOT NULL,    -- Severity (e.g., notify, alert, shutdown, restart)
+                alert_message TEXT NOT NULL,         -- Description of the alert
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (mac_address) REFERENCES static_info(mac_address)
+            )""")
+        self.mydb.commit()
     
     def create_static_computer_info(self):
         self.mycursor.execute("""
@@ -99,7 +122,17 @@ class Database:
     def insert_users_info(self, username, password):
         self.mycursor.execute("""
             INSERT INTO users_info (username, password) VALUES (%s, %s)""", (username, password))
-        
+        self.mydb.commit()
+
+    def insert_server_log(self, address, log_message):
+        self.mycursor.execute("""
+            INSERT INTO server_logs (address, log_message) VALUES (%s, %s)""", (address, log_message))
+        self.mydb.commit()
+    
+    def insert_alerts(self, mac_address, alert_type, alert_level, alert_message):
+        self.mycursor.execute("""
+            INSERT INTO alerts (mac_address, alert_type, alert_level, alert_message)
+            VALUES (%s, %s, %s, %s)""", (mac_address, alert_type, alert_level, alert_message))
         self.mydb.commit()
 
     def insert_static_computer_info(self, mac_address, payload):
@@ -210,10 +243,12 @@ class Database:
 
 if __name__ == "__main__":
     db = Database()
-    db.drop_all_tables()
-    db.create_table_user()
-    db.create_static_computer_info()
-    db.create_dynamic_computer_info()
+    db.create_table_alerts()
+    db.create_table_server_log()
+    # db.drop_all_tables()
+    # db.create_table_user()
+    # db.create_static_computer_info()
+    # db.create_dynamic_computer_info()
     
     db.close()
 
