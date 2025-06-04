@@ -88,6 +88,7 @@ def handle_client(conn, addr):
 
     try:
         buffer = ""
+        db = Database()
         while True:
             data = conn.recv(BUFFER_SIZE).decode('utf-8')
             if not data:
@@ -96,10 +97,8 @@ def handle_client(conn, addr):
                 return
 
             buffer += data
-            db = Database()
             while '\n' in buffer:
                 line, buffer = buffer.split('\n', 1)
-
                 try:
                     json_data = json.loads(line)
                 except json.JSONDecodeError:
@@ -116,6 +115,7 @@ def handle_client(conn, addr):
                 
                 mac_address = payload.get("MAC", {}).get("mac_address", "unknown")
                 data_type = payload.get("type", "unknown")
+                check = True
 
                 if data_type == "static":
                     if not db.has_static_data(mac_address):  
@@ -139,7 +139,9 @@ def handle_client(conn, addr):
                     print("insert_dynamic_computer_info",payload )
                     db.insert_dynamic_computer_info(mac_address, payload)
                     logging.info(f"{client_ip} - Lưu dynamic data thành công")
-                    send_response(conn, "success", "Data saved successfully", code=200)
+                    if check:
+                        send_response(conn, "success", "Data saved successfully", code=200)
+                        check = False
                 
 
                     # Kiểm tra hiệu năng vượt ngưỡng
@@ -220,8 +222,16 @@ def start_server():
         server_socket.listen()
         print(f"[+] Server đang lắng nghe tại {HOST}:{PORT}...")
 
+        # server_socket.settimeout(10)
         while True:
+            # try:
             conn, addr = server_socket.accept()
+            # except socket.timeout:
+            #     continue  
+            # except KeyboardInterrupt:
+            #     print("Server đã tắt.")
+            #     break
+    
             try:
                 ssl_conn = context.wrap_socket(conn, server_side=True)
             except ssl.SSLError as e:

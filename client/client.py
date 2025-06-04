@@ -224,6 +224,7 @@ def receive_response(conn):
     while True:
         data = conn.recv(4096).decode("utf-8")
         buffer += data
+        print(buffer)
         if "\n" in buffer:
             line, _ = buffer.split("\n", 1)
             return json.loads(line)
@@ -232,23 +233,23 @@ def listen_to_server(client_socket):
     try:
         response = receive_response(client_socket)
         if response.get("status") == "ignore":
-            print("[INFO] Server đã có static info, bỏ qua.")
+            os.system('powershell -Command "Add-Type -AssemblyName PresentationFramework; [System.Windows.MessageBox]::Show(\'[INFO] Server đã có static info, bỏ qua.\')"')
         elif response.get("status") == "error":
-            print(f"[ERROR] Có lỗi xảy ra: {response.get('message')}")
-        elif response.get("status") == "success":
-            print("[INFO] Server chấp nhận client info.")
+            os.system(f'powershell -Command "Add-Type -AssemblyName PresentationFramework; [System.Windows.MessageBox]::Show(\'[ERROR] Có lỗi xảy ra: {response.get('message')}\')"')
+        # elif response.get("status") == "success":
+        #     os.system(f'powershell -Command "Add-Type -AssemblyName PresentationFramework; [System.Windows.MessageBox]::Show(\'[INFO] Server chấp nhận client info.\')"')
         elif response.get("command") == "shutdown":
-            print("[SHUTDOWN] Máy sẽ tắt sau 5 giây.")
-            time.sleep(100)
+            os.system(f'powershell -Command "Add-Type -AssemblyName PresentationFramework; [System.Windows.MessageBox]::Show(\'[SHUTDOWN] Máy sẽ tắt sau 5 giây.\')"')
+            time.sleep(10)
             os.system("shutdown /s /t 0")
         elif response.get("command") == "restart":
-            print("[RESTART] Máy sẽ khởi động lại sau 5 giây.")
-            time.sleep(100)
+            os.system(f'powershell -Command "Add-Type -AssemblyName PresentationFramework; [System.Windows.MessageBox]::Show(\'[RESTART] Máy sẽ khởi động lại sau 5 giây.\')"')
+            time.sleep(10)
             os.system("shutdown /r /t 0") 
         elif response.get("command") == "alert":
-            print(f"[ALERT] {response.get('suggestion')}")
+            os.system(f'powershell -Command "Add-Type -AssemblyName PresentationFramework; [System.Windows.MessageBox]::Show(\'[ALERT] {response.get('suggestion')}\')"')
         elif response.get("command") == "notify":
-            print(f"[NOTIFY] {response.get('suggestion')}")
+            os.system(f'powershell -Command "Add-Type -AssemblyName PresentationFramework; [System.Windows.MessageBox]::Show(\'[NOTIFY] {response.get('suggestion')}\')"')
     except Exception as e:
         print(f"[LỖI] không nhận được phản hồi hợp lệ từ server: {e}")
 

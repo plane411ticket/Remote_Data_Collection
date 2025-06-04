@@ -1,95 +1,117 @@
 # import socket
 # import threading
 # import ssl
+# import time
 # from collections import deque
-
 # CERT_FILE = "cert.pem"
 # KEY_FILE = "key.pem"
 
-# # Server: (host, port, weight)
+# # Danh sách server (host, port, trọng số)
 # SERVERS = [
-#     ('127.0.0.1', 9001, 3),
-#     ('127.0.0.1', 9002, 1),
-#     ('127.0.1', 9003, 2),
+#     ("127.0.0.1", 9001, 3),
+#     ("127.0.0.1", 9002, 1),
+#     ("127.0.0.1", 9003, 2),
 # ]
 
 # # Tạo hàng đợi theo trọng số
 # server_queue = deque()
-# for host, port, weight in SERVERS:
-#     for _ in range(weight):
-#         server_queue.append((host, port))
+# server_lock = threading.Lock()
+
+# def check_available_servers():
+#     while True:
+#         available = []
+#         for host, port, weight in SERVERS:
+#             try:
+#                 print(f"[DEBUG] Đang kiểm tra server: {host}:{port}")
+#                 sock = socket.create_connection((host, port), timeout=3)
+#                 sock.close()
+#                 for _ in range(weight):
+#                     available.append((host, port))
+#                 print(f"[DEBUG] Server {host}:{port} sẵn sàng")
+#             except Exception as e:
+#                 print(f"[DEBUG] Server {host}:{port} KHÔNG sẵn sàng: {e}")
+#         with server_lock:
+#             server_queue.clear()
+#             server_queue.extend(available)
+#         time.sleep(5)
 
 # def get_next_server():
-#     server = server_queue.popleft()
-#     server_queue.append(server)
-#     return server
+#     """Lấy server tiếp theo theo thuật toán Round Robin có trọng số"""
+#     with server_lock:
+#         if not server_queue:
+#             return None
+#         server = server_queue.popleft()
+#         server_queue.append(server)
+#         return server
 
 # def forward_data(src_sock, dst_sock):
-#     """Chuyển tiếp dữ liệu từ src sang dst"""
+#     """Chuyển tiếp dữ liệu giữa client và server"""
 #     try:
 #         while True:
 #             data = src_sock.recv(4096)
 #             if not data:
 #                 break
 #             dst_sock.sendall(data)
-#     except:
+#     except Exception:
 #         pass
 #     finally:
 #         src_sock.close()
 #         dst_sock.close()
 
 # def handle_client(client_socket):
-#     server_addr = get_next_server()
-#     print(f"[INFO] Chuyển tiếp đến server {server_addr}")
-#     try:
-#         server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-#         server_socket.connect(server_addr)
-#     # Tạo 2 luồng chuyển tiếp dữ liệu 2 chiều
-#         threading.Thread(target=forward_data, args=(client_socket, server_socket)).start()
-#         threading.Thread(target=forward_data, args=(server_socket, client_socket)).start()
-#     except Exception as e:
-#         print(f"[LỖI] Không thể kết nối tới server {server_addr}: {e}")
-#         client_socket.close()
+#     for _ in range(len(SERVERS)*3):
+#         server_addr = get_next_server()
+#         print(f"[INFO] Đang tìm server khả dụng...", server_addr)
+#         if not server_addr:
+#             print("[LỖI] Không có server khả dụng.")
+#             time.sleep(5)
+#             continue
+#         print(f"[INFO] Chuyển tiếp đến server {server_addr}")
+#         try:
+#             # Tạo context SSL phía client (vì load balancer đóng vai trò client khi kết nối tới server)
+#             context_to_server = ssl.create_default_context()
+#             context_to_server.check_hostname = False
+#             context_to_server.verify_mode = ssl.CERT_NONE
 
-#     #     data = client_socket.recv(4096)
-#     #     if data:
-#     #         server_socket.sendall(data)
-#     #         response = server_socket.recv(4096)
-#     #         client_socket.sendall(response)
+#             raw_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+#             server_socket = context_to_server.wrap_socket(raw_sock)
+#             server_socket.connect(server_addr)
 
-#     #     server_socket.close()
-#     # except Exception as e:
-#     #     print("Lỗi:", e)
-#     # finally:
-#     #     client_socket.close()
-    
+#             # Tạo 2 thread chuyển tiếp dữ liệu 2 chiều
+#             threading.Thread(target=forward_data, args=(client_socket, server_socket), daemon=True).start()
+#             threading.Thread(target=forward_data, args=(server_socket, client_socket), daemon=True).start()
+#         except Exception as e:
+#             print(f"[LỖI] Không thể kết nối tới server {server_addr}: {e}")
+#     print("[LỖI] Không có server nào khả dụng.")
+#     client_socket.close()
 
 # def start_load_balancer():
-#     # Tạo context SSL
+#     time.sleep(10)
 #     context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
 #     context.load_cert_chain(certfile=CERT_FILE, keyfile=KEY_FILE)
 
-#     # Tạo socket TCP/IP
 #     balancer_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 #     balancer_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-#     balancer_socket.bind(('0.0.0.0', 9500))
-#     balancer_socket.listen(5)
-#     print("Load Balancer đang chạy tại cổng 9500...")
+#     balancer_socket.bind(("0.0.0.0", 9500))
+#     balancer_socket.listen(10)
+#     print("[+] Load Balancer đang chạy tại cổng 9500...")
 
 #     while True:
 #         try:
 #             client_sock, addr = balancer_socket.accept()
-#             # threading.Thread(target=handle_client, args=(client_sock,)).start()
 #             client_ssl = context.wrap_socket(client_sock, server_side=True)
-#             print(f"[+] Kết nối từ {addr}")
-#             threading.Thread(target=handle_client, args=(client_ssl,)).start()
+#             print(f"[+] Kết nối TLS từ {addr}")
+#             threading.Thread(target=handle_client, args=(client_ssl,), daemon=True).start()
 #         except ssl.SSLError as e:
 #             print(f"[SSL ERROR] {e}")
 #             client_sock.close()
 #         except Exception as e:
 #             print(f"[ERROR] {e}")
+
 # if __name__ == "__main__":
+#     threading.Thread(target=check_available_servers, daemon=True).start()
 #     start_load_balancer()
+
 import socket
 import threading
 import ssl
