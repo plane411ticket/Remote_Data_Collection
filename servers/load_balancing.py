@@ -3,8 +3,13 @@ import threading
 import ssl
 from collections import deque
 
+# Hằng số cấu hình
 CERT_FILE = "cert.pem"
 KEY_FILE = "key.pem"
+LOAD_BALANCER_HOST = "0.0.0.0"
+LOAD_BALANCER_PORT = 9500
+MAX_CONNECTIONS = 10
+BUFFER_SIZE = 4096
 
 # Danh sách server (host, port, trọng số)
 SERVERS = [
@@ -29,7 +34,7 @@ def forward_data(src_sock, dst_sock):
     """Chuyển tiếp dữ liệu giữa client và server"""
     try:
         while True:
-            data = src_sock.recv(4096)
+            data = src_sock.recv(BUFFER_SIZE)
             if not data:
                 break
             dst_sock.sendall(data)
@@ -65,9 +70,9 @@ def start_load_balancer():
 
     balancer_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     balancer_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    balancer_socket.bind(("0.0.0.0", 9500))
-    balancer_socket.listen(10)
-    print("[+] Load Balancer đang chạy tại cổng 9500...")
+    balancer_socket.bind((LOAD_BALANCER_HOST, LOAD_BALANCER_PORT))
+    balancer_socket.listen(MAX_CONNECTIONS)
+    print(f"[+] Load Balancer đang chạy tại cổng {LOAD_BALANCER_PORT}...")
 
     while True:
         try:

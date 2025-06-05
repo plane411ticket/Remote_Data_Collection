@@ -7,6 +7,22 @@ import psutil
 import cpuinfo
 import os
 
+CONFIG = {
+    "server": {
+        "ip": "127.0.0.1",
+        "port": 9500
+    },
+    "timing": {
+        "dynamic_info_interval": 5,
+        "shutdown_delay": 10,
+        "restart_delay": 10,
+        "cpu_interval": 1
+    },
+    "network": {
+        "buffer_size": 4096
+    }
+}
+
 
 def static_system_info():
     cpu_info = cpuinfo.get_cpu_info()
@@ -51,7 +67,7 @@ def dynamic_system_info():
     return {
         "payload": {
             "cpu": {
-                "cpu_usage": psutil.cpu_percent(interval=1),
+                "cpu_usage": psutil.cpu_percent(interval=CONFIG["timing"]["cpu_interval"]),
             },
             "memory": {
                 "available": psutil.virtual_memory().available,
@@ -77,7 +93,7 @@ def dynamic_system_info():
 def receive_response(conn):
     buffer = ""
     while True:
-        data = conn.recv(4096).decode("utf-8")
+        data = conn.recv(CONFIG["network"]["buffer_size"]).decode("utf-8")
         buffer += data
         print(buffer)
         if "\n" in buffer:
@@ -94,12 +110,12 @@ def listen_to_server(client_socket):
         # elif response.get("status") == "success":
         #     os.system(f'powershell -Command "Add-Type -AssemblyName PresentationFramework; [System.Windows.MessageBox]::Show(\'[INFO] Server chấp nhận client info.\')"')
         elif response.get("command") == "shutdown":
-            os.system(f'powershell -Command "Add-Type -AssemblyName PresentationFramework; [System.Windows.MessageBox]::Show(\'[SHUTDOWN] Máy sẽ tắt sau 5 giây.\')"')
-            time.sleep(10)
+            os.system(f'powershell -Command "Add-Type -AssemblyName PresentationFramework; [System.Windows.MessageBox]::Show(\'[SHUTDOWN] Máy sẽ tắt sau {CONFIG["timing"]["shutdown_delay"]} giây.\')"')
+            time.sleep(CONFIG["timing"]["shutdown_delay"])
             os.system("shutdown /s /t 0")
         elif response.get("command") == "restart":
-            os.system(f'powershell -Command "Add-Type -AssemblyName PresentationFramework; [System.Windows.MessageBox]::Show(\'[RESTART] Máy sẽ khởi động lại sau 5 giây.\')"')
-            time.sleep(10)
+            os.system(f'powershell -Command "Add-Type -AssemblyName PresentationFramework; [System.Windows.MessageBox]::Show(\'[RESTART] Máy sẽ khởi động lại sau {CONFIG["timing"]["restart_delay"]} giây.\')"')
+            time.sleep(CONFIG["timing"]["restart_delay"])
             os.system("shutdown /r /t 0") 
         elif response.get("command") == "alert":
             os.system(f'powershell -Command "Add-Type -AssemblyName PresentationFramework; [System.Windows.MessageBox]::Show(\'[ALERT] {response.get('suggestion')}\')"')
@@ -109,9 +125,9 @@ def listen_to_server(client_socket):
         print(f"[LỖI] không nhận được phản hồi hợp lệ từ server: {e}")
 
 def connect_to_server():
-    server_ip = "127.0.0.1"
-    port = 9500
-
+    server_ip = CONFIG["server"]["ip"]
+    port = CONFIG["server"]["port"]
+    
     context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
     context.check_hostname = False
     context.verify_mode = ssl.CERT_NONE
@@ -133,8 +149,8 @@ def connect_to_server():
                     client_socket.sendall((json.dumps(dyn_info) + '\n').encode('utf-8'))
                     listen_to_server(client_socket)
                     print("[>] Đã gửi dynamic info.")
-                    time.sleep(5)
-
+                    time.sleep(CONFIG["timing"]["dynamic_info_interval"])
+                    
             except Exception as e:
                 print(f"[LỖI] Không thể kết nối/gửi dữ liệu: {e}")
 if __name__ == "__main__":
