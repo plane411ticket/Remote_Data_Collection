@@ -1,3 +1,6 @@
 mysql-connector-python
 py-cpuinfo
 psutil
+PyMySQL
+PySide6
+matplotlib

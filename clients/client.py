@@ -103,24 +103,30 @@ def receive_response(conn):
 def listen_to_server(client_socket):
     try:
         response = receive_response(client_socket)
+        
         if response.get("status") == "ignore":
             os.system('powershell -Command "Add-Type -AssemblyName PresentationFramework; [System.Windows.MessageBox]::Show(\'[INFO] Server đã có static info, bỏ qua.\')"')
         elif response.get("status") == "error":
-            os.system(f'powershell -Command "Add-Type -AssemblyName PresentationFramework; [System.Windows.MessageBox]::Show(\'[ERROR] Có lỗi xảy ra: {response.get('message')}\')"')
+            error_message = response.get("message", "Unknown error")
+            os.system(f'powershell -Command "Add-Type -AssemblyName PresentationFramework; [System.Windows.MessageBox]::Show(\'[ERROR] Có lỗi xảy ra: {error_message}\')"')
         # elif response.get("status") == "success":
         #     os.system(f'powershell -Command "Add-Type -AssemblyName PresentationFramework; [System.Windows.MessageBox]::Show(\'[INFO] Server chấp nhận client info.\')"')
         elif response.get("command") == "shutdown":
-            os.system(f'powershell -Command "Add-Type -AssemblyName PresentationFramework; [System.Windows.MessageBox]::Show(\'[SHUTDOWN] Máy sẽ tắt sau {CONFIG["timing"]["shutdown_delay"]} giây.\')"')
+            shutdown_delay = CONFIG["timing"]["shutdown_delay"]
+            os.system(f'powershell -Command "Add-Type -AssemblyName PresentationFramework; [System.Windows.MessageBox]::Show(\'[SHUTDOWN] Máy sẽ tắt sau {shutdown_delay} giây.\')"')
             time.sleep(CONFIG["timing"]["shutdown_delay"])
             os.system("shutdown /s /t 0")
         elif response.get("command") == "restart":
-            os.system(f'powershell -Command "Add-Type -AssemblyName PresentationFramework; [System.Windows.MessageBox]::Show(\'[RESTART] Máy sẽ khởi động lại sau {CONFIG["timing"]["restart_delay"]} giây.\')"')
+            restart_delay = CONFIG["timing"]["restart_delay"]
+            os.system(f'powershell -Command "Add-Type -AssemblyName PresentationFramework; [System.Windows.MessageBox]::Show(\'[RESTART] Máy sẽ khởi động lại sau {restart_delay} giây.\')"')
             time.sleep(CONFIG["timing"]["restart_delay"])
             os.system("shutdown /r /t 0") 
         elif response.get("command") == "alert":
-            os.system(f'powershell -Command "Add-Type -AssemblyName PresentationFramework; [System.Windows.MessageBox]::Show(\'[ALERT] {response.get('suggestion')}\')"')
+            suggestion_message = response.get("suggestion", "No suggestion")
+            os.system(f'powershell -Command "Add-Type -AssemblyName PresentationFramework; [System.Windows.MessageBox]::Show(\'[ALERT] {suggestion_message}\')"')
         elif response.get("command") == "notify":
-            os.system(f'powershell -Command "Add-Type -AssemblyName PresentationFramework; [System.Windows.MessageBox]::Show(\'[NOTIFY] {response.get('suggestion')}\')"')
+            suggestion_message = response.get("suggestion", "No notification")
+            os.system(f'powershell -Command "Add-Type -AssemblyName PresentationFramework; [System.Windows.MessageBox]::Show(\'[NOTIFY] {suggestion_message}\')"')
     except Exception as e:
         print(f"[LỖI] không nhận được phản hồi hợp lệ từ server: {e}")
 

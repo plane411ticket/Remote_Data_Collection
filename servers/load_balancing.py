@@ -4,8 +4,9 @@ import ssl
 from collections import deque
 
 # Hằng số cấu hình
-CERT_FILE = "cert.pem"
-KEY_FILE = "key.pem"
+import os
+CERT_FILE = os.path.join(os.path.dirname(__file__), "cert.pem")
+KEY_FILE = os.path.join(os.path.dirname(__file__), "key.pem")
 LOAD_BALANCER_HOST = "0.0.0.0"
 LOAD_BALANCER_PORT = 9500
 MAX_CONNECTIONS = 10

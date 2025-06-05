@@ -3,7 +3,7 @@ import ssl
 import json
 import threading
 import logging
-from database import Database
+
 import ssl
 import sys
 import io
@@ -11,7 +11,12 @@ import queue
 import os
 import argparse
 
+# Set path to the database.py file
+sys.path.append('G:/Projects/Class/Remote_Data_Collection')
+from database.database import Database
 
+CERT_PATH = "G:\Projects\Class\Remote_Data_Collection\servers\cert.pem"
+KEY_PATH = "G:\Projects\Class\Remote_Data_Collection\servers\key.pem"
 
 
 HOST = '0.0.0.0'
@@ -244,7 +249,7 @@ def handle_client(conn, addr):
 
 def start_server():
     context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-    context.load_cert_chain(certfile="cert.pem", keyfile="key.pem")
+    context.load_cert_chain(certfile=CERT_PATH, keyfile=KEY_PATH)
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
         server_socket.bind((HOST, PORT))
         server_socket.listen()
