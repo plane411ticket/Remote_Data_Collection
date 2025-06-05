@@ -1,4 +1,5 @@
 import mysql.connector
+import hashlib
 
 
 class Database:
@@ -14,15 +15,17 @@ class Database:
             host="localhost",
             port=3306,
             user="root",
-            password="",  # Replace with your actual password
+            password="",
+            charset='utf8mb4',
+            autocommit=True
         )
 
         self.mycursor = self.mydb.cursor()
 
         self.mycursor.execute("CREATE DATABASE IF NOT EXISTS remote_collection")
         self.mydb.database = 'remote_collection'
-        self.mydb.commit()
-
+        
+        
     def drop_all_tables(self):
         self.mycursor.execute("SET FOREIGN_KEY_CHECKS = 0")
         self.mycursor.execute("SHOW TABLES")
@@ -34,17 +37,18 @@ class Database:
 
         self.mycursor.execute("SET FOREIGN_KEY_CHECKS = 1")
 
-        self.mydb.commit()
-
+        
     def create_table_user(self):
         self.mycursor.execute("""
-            CREATE TABLE IF NOT EXISTS users_info (
+            CREATE TABLE IF NOT EXISTS admin_users (
                 id INT AUTO_INCREMENT PRIMARY KEY,
-                client_id INT NOT NULL,
-                username VARCHAR(255) NOT NULL,
-                password VARCHAR(255) NOT NULL
+                username VARCHAR(255) NOT NULL UNIQUE,
+                password_hash VARCHAR(255) NOT NULL,
+                full_name VARCHAR(255) NOT NULL,
+                email VARCHAR(255) NOT NULL UNIQUE,
+                last_login TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
             )""")
-        self.mydb.commit()
+        
 
     def create_table_server_log(self):
         self.mycursor.execute("""
@@ -54,7 +58,7 @@ class Database:
                 log_message TEXT,
                 timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )""")
-        self.mydb.commit()
+        
     
     def create_table_alerts(self):
         self.mycursor.execute("""
@@ -67,7 +71,7 @@ class Database:
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (mac_address) REFERENCES static_info(mac_address)
             )""")
-        self.mydb.commit()
+        
     
     def create_static_computer_info(self):
         self.mycursor.execute("""
@@ -82,24 +86,7 @@ class Database:
                 memory_total BIGINT,
                 swap_total BIGINT,
                 timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )""")
-        self.mydb.commit()
-    
-    # def create_static_info_history (self):
-    #     self.mycursor.execute("""
-    #         CREATE TABLE IF NOT EXISTS static_info_history (
-    #             id INT AUTO_INCREMENT PRIMARY KEY,
-    #             mac_address BIGINT UNSIGNED,          
-    #             cpu_brand VARCHAR(255),
-    #             cpu_arch VARCHAR(50),
-    #             cpu_bits INT,
-    #             cpu_logical INT,
-    #             cpu_physical INT,
-    #             memory_total BIGINT,
-    #             swap_total BIGINT,
-    #             timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    #         )""")
-    #     self.mydb.commit()
+            )""") 
 
 
     def create_dynamic_computer_info(self):
@@ -118,23 +105,17 @@ class Database:
                 timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (mac_address) REFERENCES static_info(mac_address)
             )""")
-        self.mydb.commit()
-    
-    def insert_users_info(self, username, password):
-        self.mycursor.execute("""
-            INSERT INTO users_info (username, password) VALUES (%s, %s)""", (username, password))
-        self.mydb.commit()
 
     def insert_server_log(self, address, log_message):
         self.mycursor.execute("""
             INSERT INTO server_logs (address, log_message) VALUES (%s, %s)""", (address, log_message))
-        self.mydb.commit()
+        
     
     def insert_alerts(self, mac_address, alert_type, alert_level, alert_message):
         self.mycursor.execute("""
             INSERT INTO alerts (mac_address, alert_type, alert_level, alert_message)
             VALUES (%s, %s, %s, %s)""", (mac_address, alert_type, alert_level, alert_message))
-        self.mydb.commit()
+        
 
     def insert_static_computer_info(self, mac_address, payload):
         try:
@@ -152,7 +133,7 @@ class Database:
                     cpu["brand"], cpu["arch"], cpu["bits"], cpu["count_logical"], cpu["count_physical"], memory["total"], swap["total"]
                 )
             )
-            self.mydb.commit()
+            
             return True
         except mysql.connector.Error as err:
             return False  
@@ -173,7 +154,7 @@ class Database:
     #                 cpu["brand"], cpu["arch"], cpu["bits"], cpu["count_logical"], cpu["count_physical"], memory["total"], swap["total"]
     #             )
     #         )
-    #         self.mydb.commit()
+    #         
     #         return True
     #     except mysql.connector.Error as err:
     #         return False  
@@ -196,7 +177,7 @@ class Database:
                     swap["percent"], disk["disk_used"], disk["disk_free"]
                 )
             )
-            self.mydb.commit()
+            
             return True
         except mysql.connector.Error as err:
             return False  
@@ -224,15 +205,15 @@ class Database:
 
     def delete_all_users(self):
         self.mycursor.execute("DELETE FROM users_info")
-        self.mydb.commit()
+        
 
     def delete_all_static_info(self):
         self.mycursor.execute("DELETE FROM static_info")
-        self.mydb.commit()
+        
     
     def delete_all_dynamic_info(self):
         self.mycursor.execute("DELETE FROM dynamic_info")
-        self.mydb.commit()
+        
 
     def close(self):
         self.mydb.close()
@@ -250,12 +231,29 @@ class Database:
 
 if __name__ == "__main__":
     db = Database()
+
+    db.drop_all_tables()
+    db.create_table_user()
+    db.create_static_computer_info()
+    db.create_dynamic_computer_info()
     db.create_table_alerts()
     db.create_table_server_log()
-    # db.drop_all_tables()
-    # db.create_table_user()
-    # db.create_static_computer_info()
-    # db.create_dynamic_computer_info()
+    print("✅ All tables created successfully.")
     
+    
+    # Test creating a sample admin user
+    admin_username = "admin"
+    admin_password = "123456"
+    password_hash = hashlib.sha256(admin_password.encode()).hexdigest()
+    try:
+        db.mycursor.execute("""
+            INSERT INTO admin_users (username, password_hash, full_name, email)
+            VALUES (%s, %s, %s, %s)
+        """, (admin_username, password_hash, "Administrator", "admin@example.com"))
+        print("✅ Sample admin user created successfully")
+    except Exception as e:
+        print(f"⚠️ Could not create sample user: {e}")
+    
+
     db.close()
 

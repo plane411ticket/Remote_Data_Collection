@@ -1,19 +1,16 @@
 from PySide6.QtWidgets import (
     QApplication, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, 
     QLabel, QTableWidget, QTableWidgetItem, QComboBox, QGroupBox,
-    QMessageBox, QTextEdit
+    QMessageBox
 )
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QFont, QPixmap
 import sys
 import pymysql
-import logging
 import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
 from matplotlib.backends.backend_agg import FigureCanvasAgg
-from datetime import datetime
 import io
-import base64
+from auth_dialog import AuthDialog
 
 
 class CentralServerUI(QWidget):
@@ -22,6 +19,12 @@ class CentralServerUI(QWidget):
         self.setWindowTitle('Central Server Dashboard - pymysql Version')
         self.resize(1200, 700)
         self.db_connection = None
+        self.current_user = None
+        
+        # Show authentication dialog first
+        if not self.authenticate_user():
+            sys.exit(0)  # Exit if authentication fails
+            
         self.init_database()
         self.init_ui()
         self.load_mac_addresses()
@@ -30,6 +33,46 @@ class CentralServerUI(QWidget):
         self.refresh_timer = QTimer()
         self.refresh_timer.timeout.connect(self.refresh_data)
         self.refresh_timer.start(5000)  # Refresh every 5 seconds
+
+    def authenticate_user(self):
+        """Hiển thị dialog authentication và xác thực user"""
+        auth_dialog = AuthDialog()
+        result = auth_dialog.exec()
+        
+        if result == AuthDialog.DialogCode.Accepted:
+            # Get user info from database
+            try:
+                temp_connection = pymysql.connect(
+                    host="localhost",
+                    port=3306,
+                    user="root",
+                    password="",
+                    database="remote_collection",
+                    charset='utf8mb4',
+                    autocommit=True
+                )
+                cursor = temp_connection.cursor()
+                cursor.execute("""
+                    SELECT username, full_name, email, last_login 
+                    FROM admin_users 
+                    WHERE last_login = (SELECT MAX(last_login) FROM admin_users)
+                """)
+                user_info = cursor.fetchone()
+                if user_info:
+                    self.current_user = {
+                        'username': user_info[0],
+                        'full_name': user_info[1],
+                        'email': user_info[2],
+                        'last_login': user_info[3]
+                    }
+                temp_connection.close()
+                print(f"✅ User authenticated: {self.current_user['full_name']}")
+                return True
+            except Exception as e:
+                print(f"❌ Error getting user info: {e}")
+                return False
+        else:
+            return False
 
     def init_database(self):
         """Khởi tạo kết nối database bằng pymysql"""
@@ -390,7 +433,47 @@ class CentralServerUI(QWidget):
 
     def init_ui(self):
         """Khởi tạo giao diện người dùng"""
-        main_layout = QHBoxLayout(self)
+        main_layout = QVBoxLayout(self)
+        
+        # Top: User Info Bar
+        user_info_layout = QHBoxLayout()
+        # Welcome message
+        welcome_label = QLabel(f"👤 Welcome, {self.current_user['full_name']} ({self.current_user['username']})")
+        welcome_label.setFont(QFont('Arial', 12, QFont.Weight.Bold))
+        welcome_label.setStyleSheet("""
+            QLabel {
+                color: #2c3e50;
+                padding: 8px;
+                background-color: #ecf0f1;
+                border-radius: 5px;
+            }
+        """)
+        user_info_layout.addWidget(welcome_label)
+        
+        user_info_layout.addStretch()
+        
+        # Logout button
+        logout_btn = QPushButton('🚪 Logout')
+        logout_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #e74c3c;
+                color: white;
+                border: none;
+                padding: 8px 15px;
+                border-radius: 5px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #c0392b;
+            }
+        """)
+        logout_btn.clicked.connect(self.handle_logout)
+        user_info_layout.addWidget(logout_btn)
+        
+        main_layout.addLayout(user_info_layout)
+        
+        # Main Content Layout
+        content_layout = QHBoxLayout()
 
         # Left: Command Buttons
         left_box = QGroupBox('Commands')
@@ -522,13 +605,15 @@ class CentralServerUI(QWidget):
         self.logs_table.setAlternatingRowColors(True)
         self.logs_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         right_layout.addWidget(self.logs_table)
-        
         right_box.setLayout(right_layout)
 
-        # Add all sections to main layout
-        main_layout.addWidget(left_box, 1)
-        main_layout.addWidget(center_box, 3)
-        main_layout.addWidget(right_box, 2)
+        # Add all sections to content layout
+        content_layout.addWidget(left_box, 1)
+        content_layout.addWidget(center_box, 3)
+        content_layout.addWidget(right_box, 2)
+        
+        # Add content layout to main layout
+        main_layout.addLayout(content_layout)
         
         # Connect signals
         self.mac_selector.currentIndexChanged.connect(self.handle_mac_selected)
@@ -536,6 +621,17 @@ class CentralServerUI(QWidget):
         # Load initial data
         self.load_alerts()
         self.load_server_logs()
+
+    def handle_logout(self):
+        """Xử lý đăng xuất"""
+        reply = QMessageBox.question(self, "Confirm Logout", 
+                                   "Are you sure you want to logout?",
+                                   QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        
+        if reply == QMessageBox.StandardButton.Yes:
+            print(f"✅ User {self.current_user['username']} logged out")
+            self.close()
+            QApplication.quit()
 
     def closeEvent(self, event):
         """Đóng kết nối database khi thoát ứng dụng"""
