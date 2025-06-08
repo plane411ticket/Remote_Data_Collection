@@ -115,7 +115,7 @@ def listen_to_server(client_socket):
             os.system(f'powershell -Command "Add-Type -AssemblyName PresentationFramework; [System.Windows.MessageBox]::Show(\'{msg}\')"')
             time.sleep(shutdown_delay)
             os.system("shutdown /s /t 0")
-        elif response.get("command") == "restart":
+        elif response.get("alert_level") == "restart":
             restart_delay = CONFIG["timing"]["restart_delay"]
             msg = response.get("message") or f"[RESTART] Máy sẽ khởi động lại sau {restart_delay} giây."
             os.system(f'powershell -Command "Add-Type -AssemblyName PresentationFramework; [System.Windows.MessageBox]::Show(\'{msg}\')"')
@@ -134,30 +134,34 @@ def connect_to_server():
     server_ip = CONFIG["server"]["ip"]
     port = CONFIG["server"]["port"]
     
-    context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
-    context.check_hostname = False
-    context.verify_mode = ssl.CERT_NONE
+    
+    while True:
+        try:
+            context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
+            context.check_hostname = False
+            context.verify_mode = ssl.CERT_NONE
 
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-        with context.wrap_socket(sock, server_hostname=server_ip) as client_socket:
-            try:
-                client_socket.connect((server_ip, port))
-                print(f"[+] Đã kết nối TLS tới server {server_ip}:{port}")
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                with context.wrap_socket(sock, server_hostname=server_ip) as client_socket:
+                        client_socket.connect((server_ip, port))
+                        print(f"[+] Đã kết nối TLS tới server {server_ip}:{port}")
 
-                # Gửi thông tin hệ thống tĩnh (static)
-                static_info = static_system_info()
-                client_socket.sendall((json.dumps(static_info) + '\n').encode('utf-8'))
-                listen_to_server(client_socket)
-                
-                # Gửi định kỳ thông tin động (dynamic)
-                while True:
-                    dyn_info = dynamic_system_info()
-                    client_socket.sendall((json.dumps(dyn_info) + '\n').encode('utf-8'))
-                    listen_to_server(client_socket)
-                    print("[>] Đã gửi dynamic info.")
-                    time.sleep(CONFIG["timing"]["dynamic_info_interval"])
+                        # Gửi thông tin hệ thống tĩnh (static)
+                        static_info = static_system_info()
+                        client_socket.sendall((json.dumps(static_info) + '\n').encode('utf-8'))
+                        listen_to_server(client_socket)
+                        
+                        # Gửi định kỳ thông tin động (dynamic)
+                        while True:
+                            dyn_info = dynamic_system_info()
+                            client_socket.sendall((json.dumps(dyn_info) + '\n').encode('utf-8'))
+                            listen_to_server(client_socket)
+                            print("[>] Đã gửi dynamic info.")
+                            time.sleep(CONFIG["timing"]["dynamic_info_interval"])
                     
-            except Exception as e:
-                print(f"[LỖI] Không thể kết nối/gửi dữ liệu: {e}")
+        except Exception as e:
+            print(f"[LỖI] Mất kết nối hoặc lỗi xảy ra: {e}")
+            print("[~] Đợi 5 giây trước khi thử lại kết nối...")
+            time.sleep(5)
 if __name__ == "__main__":
     connect_to_server()

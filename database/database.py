@@ -1,5 +1,9 @@
 import mysql.connector
 import hashlib
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 class Database:
@@ -12,12 +16,12 @@ class Database:
         #     database = 'railway'
         # )
         self.mydb = mysql.connector.connect(
-            host="localhost",
-            port=3306,
-            user="root",
-            password="",
-            charset='utf8mb4',
-            autocommit=True
+            host=os.getenv("DB_HOST", "localhost"),
+            port=int(os.getenv("DB_PORT", 3306)),
+            user=os.getenv("DB_USER", "root"),
+            password=os.getenv("DB_PASSWORD", ""),
+            charset=os.getenv("DB_CHARSET", "utf8mb4"),
+            autocommit=os.getenv("DB_AUTOCOMMIT", "True").lower() in ('true', '1', 'yes')
         )
 
         self.mycursor = self.mydb.cursor()

@@ -4,3 +4,4 @@ psutil
 PyMySQL
 PySide6
 matplotlib
+python-dotenv

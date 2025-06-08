@@ -11,13 +11,17 @@ import io
 import queue
 import os
 import argparse
+from dotenv import load_dotenv
 
+load_dotenv()
 # Set path to the database.py file
-sys.path.append('G:/Projects/Class/Remote_Data_Collection')
+root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.append(root_dir)
+
 from database.database import Database
 
-CERT_PATH = "G:\Projects\Class\Remote_Data_Collection\servers\cert.pem"
-KEY_PATH = "G:\Projects\Class\Remote_Data_Collection\servers\key.pem"
+CERT_PATH = os.getenv("CERT_PATH")
+KEY_PATH = os.getenv("KEY_PATH")
 
 
 HOST = '0.0.0.0'
@@ -32,7 +36,11 @@ PORT = args.port
 # PORT = 9999
 BUFFER_SIZE = 4096
 
-db = Database()
+try:
+    db = Database()
+except Exception as e:
+    print(f"Lỗi khi kết nối đến cơ sở dữ liệu: {e}")
+    sys.exit(1)
 
 # HOST = '0.0.0.0'
 # parser = argparse.ArgumentParser()
@@ -105,7 +113,7 @@ def send_response(conn, status, message, code=None):
     conn.sendall((json.dumps(response) + "\n").encode('utf-8'))
 
 
-def send_command(mac_address, type, command, suggestion=None):
+def send_command(conn, mac_address, type, command, suggestion=None):
     message = {"mac_address": mac_address, "alert_type": type, "alert_level": command}
     
     if suggestion:
@@ -115,6 +123,7 @@ def send_command(mac_address, type, command, suggestion=None):
         logging.info(f"Đã gửi lệnh tới client: {message}")
     except Exception as e:
         logging.error(f"Lỗi khi gửi lệnh: {e}")
+    conn.sendall((json.dumps(message) + "\n").encode('utf-8'))
 
 
 # Mapping MAC address -> client connection
@@ -216,11 +225,10 @@ def handle_client(conn, addr):
 
                             memory_total = payload.get("memory", {}).get("total", 0)
                             if memory_total <= 8 * 1024**3:  # <= 8GB
-                                send_command(mac_address, type="memory", command="alert", suggestion="Máy bạn không phù hợp chạy song song Dual Boot")
-
+                                send_command(conn, mac_address, type="memory", command="alert", suggestion="Máy bạn không phù hợp chạy song song Dual Boot")
                             swap_total = payload.get("swap", {}).get("total", 0)  
                             if swap_total <= 4 * 1024**3:  # <= 4GB
-                                send_command(mac_address, type="swap", command="alert", suggestion="Dung lượng swap quá thấp! Cần nâng cấp swap partition")
+                                send_command(conn, mac_address, type="swap", command="alert", suggestion="Dung lượng swap quá thấp! Cần nâng cấp swap partition")
                     else:
                         logging.info(f"{mac_address} - Static data đã có, bỏ qua gói static")
                         send_response(conn, "ignore", "Static already exists", code=208)
@@ -236,37 +244,37 @@ def handle_client(conn, addr):
                     cpu = payload.get("cpu", {}).get("usage_percent", 0)
                        
                     if cpu > 90:
-                        send_command(mac_address, type="cpu", command="shutdown", suggestion="Cảnh báo: CPU đang quá tải, Cần shutdown máy!")
+                        send_command(conn, mac_address, type="cpu", command="shutdown", suggestion="Cảnh báo: CPU đang quá tải, Cần shutdown máy!")
                     elif cpu > 80:
-                        send_command(mac_address, type="cpu", suggestion="Cảnh báo: CPU đang quá tải, Cần restart máy!")
+                        send_command(conn, mac_address, type="cpu", suggestion="Cảnh báo: CPU đang quá tải, Cần restart máy!")
                     elif cpu > 70:
-                        send_command(mac_address, type="cpu", command="alert", suggestion="Cảnh báo: CPU sắp quá tải! Cần đóng ứng dụng không cần thiết!")
+                        send_command(conn, mac_address, type="cpu", command="alert", suggestion="Cảnh báo: CPU sắp quá tải! Cần đóng ứng dụng không cần thiết!")
                     elif cpu > 50:
-                        send_command(mac_address, type="cpu", command="notify", suggestion="Cảnh báo: CPU đang vượt ngưỡng sử dụng!")
+                        send_command(conn, mac_address, type="cpu", command="notify", suggestion="Cảnh báo: CPU đang vượt ngưỡng sử dụng!")
 
                     ram_percent = payload.get("memory", {}).get("percent", 0)
                     
                     if ram_percent > 90:
-                        send_command(mac_address, type="ram", command="shutdown", suggestion="Cảnh báo: RAM đang quá tải, Cần shutdown máy!")
+                        send_command(conn, mac_address, type="ram", command="shutdown", suggestion="Cảnh báo: RAM đang quá tải, Cần shutdown máy!")
                     elif ram_percent > 80:
-                        send_command(mac_address, type="ram", command="restart", suggestion="Cảnh báo: RAM đang quá tải, Cần restart máy!")
+                        send_command(conn, mac_address, type="ram", command="restart", suggestion="Cảnh báo: RAM đang quá tải, Cần restart máy!")
                     elif ram_percent > 70:
-                        send_command(mac_address, type="ram", command="alert", suggestion="Cảnh báo: RAM sắp quá tải! Cần đóng ứng dụng không cần thiết!")
+                        send_command(conn, mac_address, type="ram", command="alert", suggestion="Cảnh báo: RAM sắp quá tải! Cần đóng ứng dụng không cần thiết!")
                     elif ram_percent > 50:
-                        send_command(mac_address, type="ram", command="notify", suggestion="Cảnh báo: RAM đang vượt ngưỡng sử dụng!")
+                        send_command(conn, mac_address, type="ram", command="notify", suggestion="Cảnh báo: RAM đang vượt ngưỡng sử dụng!")
                     
                     
                     swap_percent = payload.get("swap", {}).get("percent", 0)
 
                     
                     if swap_percent > 90:
-                        send_command(mac_address, type="swap", command="shutdown", suggestion="Cảnh báo: SWAP đang quá tải, Cần shutdown máy!")
+                        send_command(conn, mac_address, type="swap", command="shutdown", suggestion="Cảnh báo: SWAP đang quá tải, Cần shutdown máy!")
                     elif swap_percent > 80:
-                        send_command(mac_address, type="swap", command="restart", suggestion="Cảnh báo: SWAP đang quá tải, Cần restart máy!")
+                        send_command(conn, mac_address, type="swap", command="restart", suggestion="Cảnh báo: SWAP đang quá tải, Cần restart máy!")
                     elif swap_percent > 70:
-                        send_command(mac_address, type="swap", command="alert", suggestion="Cảnh báo: SWAP sắp quá tải! Cần đóng ứng dụng không cần thiết!")
+                        send_command(conn, mac_address, type="swap", command="alert", suggestion="Cảnh báo: SWAP sắp quá tải! Cần đóng ứng dụng không cần thiết!")
                     elif swap_percent > 50:
-                        send_command(mac_address, type="swap", command="notify", suggestion="Cảnh báo: SWAP đang vượt ngưỡng sử dụng!")
+                        send_command(conn, mac_address, type="swap", command="notify", suggestion="Cảnh báo: SWAP đang vượt ngưỡng sử dụng!")
                     
                 else:
                     logging.warning(f"{mac_address} - Gói tin không hợp lệ: thiếu type")
@@ -326,25 +334,21 @@ def start_server():
     
             try:
                 ssl_conn = context.wrap_socket(conn, server_side=True)
+                print(f"Handshake TLS thành công với {addr}")
             except ssl.SSLError as e:
-                logging.error(f"Lỗi SSL: {e}")
+                print(f"Lỗi SSL khi handshake với {addr}: {e}")
+                conn.close()
+                continue
+            except ConnectionAbortedError as e:
+                print(f"Kết nối bị abort với {addr}: {e}")
                 conn.close()
                 continue
             
             # Tạo thread riêng cho mỗi client
-            client_thread = threading.Thread(
-                target=handle_client, 
-                args=(ssl_conn, addr),
-                name=f"Client-{addr[0]}:{addr[1]}",
-                daemon=True
-            )
-
-            client_thread.start()
+            threading.Thread(target=handle_client, args=(ssl_conn, addr), daemon=True).start()
 
 if __name__ == "__main__":
     try:
-        
         start_server()
-       
     except KeyboardInterrupt:
         print("Server đã tắt.")
