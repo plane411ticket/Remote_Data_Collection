@@ -1,7 +1,7 @@
-from PySide6.QtWidgets import (
+﻿from PySide6.QtWidgets import (
     QApplication, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, 
     QLabel, QTableWidget, QTableWidgetItem, QComboBox, QGroupBox,
-    QMessageBox
+    QMessageBox, QSplitter, QInputDialog
 )
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QFont, QPixmap
@@ -11,12 +11,21 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 import io
 from auth_dialog import AuthDialog
+import socket
+import json
+
+# Danh sách các main_server (broadcast tới tất cả)
+MAIN_SERVERS = [
+    {"host": "127.0.0.1", "port": 10001},
+    {"host": "127.0.0.1", "port": 10002},
+    # {"host": "192.168.1.102", "port": 10000},
+]
 
 
 class CentralServerUI(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle('Central Server Dashboard - pymysql Version')
+        self.setWindowTitle('Central Server Dashboard')
         self.resize(1200, 700)
         self.db_connection = None
         self.current_user = None
@@ -184,107 +193,100 @@ class CentralServerUI(QWidget):
         else:
             self.static_info.setText("No static information found for this MAC address")
 
-    def load_dynamic_info(self, mac_address, limit=50):
-        """Tạo biểu đồ thông tin dynamic từ database cho MAC address được chọn"""
+    def load_dynamic_info(self, mac_address, limit=10):
+        """Tạo nhiều biểu đồ thông tin dynamic từ database cho MAC address được chọn (bỏ Disk)"""
         if not self.db_connection or mac_address is None:
-            self.dynamic_chart.setText("No MAC address selected")
+            for chart in [self.cpu_chart, self.memory_chart, self.swap_chart, self.memory_gb_chart]:
+                chart.setText("No MAC address selected")
             return
-            
         query = """
             SELECT timestamp, cpu_usage, memory_percent, swap_percent, 
                    memory_used, memory_available, swap_used, disk_used, disk_free
             FROM dynamic_info 
             WHERE mac_address = %s
-            ORDER BY timestamp ASC
+            ORDER BY timestamp DESC
             LIMIT %s
         """
         results = self.execute_query(query, (mac_address, limit))
-        
         if not results or len(results) < 2:
-            self.dynamic_chart.setText("Insufficient data to generate chart (need at least 2 data points)")
+            for chart in [self.cpu_chart, self.memory_chart, self.swap_chart, self.memory_gb_chart]:
+                chart.setText("Insufficient data to generate chart (need at least 2 data points)")
             return
-        
         try:
             # Prepare data for plotting
-            timestamps = []
-            cpu_data = []
-            memory_data = []
-            swap_data = []
-            
-            for row in results:
-                timestamps.append(row[0])
-                cpu_data.append(row[1] if row[1] is not None else 0)
-                memory_data.append(row[2] if row[2] is not None else 0)
-                swap_data.append(row[3] if row[3] is not None else 0)
-            
-            # Create matplotlib figure
-            plt.style.use('default')
-            fig, ax = plt.subplots(figsize=(8, 6))
-            fig.patch.set_facecolor('#f8f9fa')
-            
-            # Plot lines
-            ax.plot(timestamps, cpu_data, label='CPU Usage (%)', color='#e74c3c', linewidth=2, marker='o', markersize=4)
-            ax.plot(timestamps, memory_data, label='Memory Usage (%)', color='#3498db', linewidth=2, marker='s', markersize=4)
-            ax.plot(timestamps, swap_data, label='Swap Usage (%)', color='#f39c12', linewidth=2, marker='^', markersize=4)
-            
-            # Customize chart
-            ax.set_title(f'System Performance - {self.format_mac_address(mac_address)}', 
-                        fontsize=14, fontweight='bold', pad=20)
-            ax.set_xlabel('Time', fontsize=12)
-            ax.set_ylabel('Usage (%)', fontsize=12)
-            ax.set_ylim(0, 100)
-            ax.grid(True, alpha=0.3)
-            ax.legend(loc='upper right', framealpha=0.9)
-            
-            # Format x-axis timestamps
-            if len(timestamps) > 10:
-                # Show fewer labels for readability
-                ax.xaxis.set_major_locator(plt.MaxNLocator(6))
-            
-            # Rotate x-axis labels for better readability
-            plt.xticks(rotation=45)
-            plt.tight_layout()
-            
-            # Convert plot to image
-            canvas = FigureCanvasAgg(fig)
-            canvas.draw()
-            
-            # Get image as bytes
-            buf = io.BytesIO()
-            canvas.print_png(buf)
-            buf.seek(0)
-            
-            # Convert to QPixmap and display
-            pixmap = QPixmap()
-            pixmap.loadFromData(buf.getvalue())
-            
-            # Scale pixmap to fit the label
-            scaled_pixmap = pixmap.scaled(
-                self.dynamic_chart.size(), 
-                Qt.AspectRatioMode.KeepAspectRatio, 
-                Qt.TransformationMode.SmoothTransformation
+            timestamps = [row[0] for row in results]
+            cpu_data = [row[1] if row[1] is not None else 0 for row in results]
+            memory_data = [row[2] if row[2] is not None else 0 for row in results]
+            swap_data = [row[3] if row[3] is not None else 0 for row in results]
+            memory_used = [row[4] if row[4] is not None else 0 for row in results]
+            memory_available = [row[5] if row[5] is not None else 0 for row in results]
+            # Helper to plot and set pixmap for a QLabel
+            def plot_to_label(x, y_list, label, title, ylabel, legend, colors, yunit=None):
+                plt.style.use('default')
+                fig, ax = plt.subplots(figsize=(6, 2.2))
+                fig.patch.set_facecolor('#f8f9fa')
+                for y, leg, color in zip(y_list, legend, colors):
+                    ax.plot(x, y, label=leg, color=color, linewidth=2)
+                ax.set_title(title, fontsize=11, fontweight='bold', pad=10)
+                ax.set_xlabel('Time', fontsize=9)
+                ax.set_ylabel(ylabel, fontsize=9)
+                if yunit == 'percent':
+                    ax.set_ylim(0, 100)
+                ax.grid(True, alpha=0.3)
+                ax.legend(loc='upper right', fontsize=8, framealpha=0.9)
+                if len(x) > 10:
+                    ax.xaxis.set_major_locator(plt.MaxNLocator(6))
+                plt.xticks(rotation=45, fontsize=8)
+                plt.tight_layout()
+                canvas = FigureCanvasAgg(fig)
+                canvas.draw()
+                buf = io.BytesIO()
+                canvas.print_png(buf)
+                buf.seek(0)
+                pixmap = QPixmap()
+                pixmap.loadFromData(buf.getvalue())
+                scaled_pixmap = pixmap.scaled(
+                    label.size(),
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation
+                )
+                label.setPixmap(scaled_pixmap)
+                label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                plt.close(fig)
+                buf.close()
+            # CPU Usage
+            plot_to_label(
+                timestamps, [cpu_data], self.cpu_chart,
+                f'CPU Usage - {self.format_mac_address(mac_address)}',
+                'CPU (%)', ['CPU Usage'], ['#e74c3c'], yunit='percent'
             )
-            
-            self.dynamic_chart.setPixmap(scaled_pixmap)
-            self.dynamic_chart.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            
-            # Clean up
-            plt.close(fig)
-            buf.close()
-              # Also display latest values as tooltip or status
+            # Memory Usage
+            plot_to_label(
+                timestamps, [memory_data], self.memory_chart,
+                'Memory Usage (%)', 'Memory (%)', ['Memory Usage'], ['#3498db'], yunit='percent'
+            )
+            # Swap Usage
+            plot_to_label(
+                timestamps, [swap_data], self.swap_chart,
+                'Swap Usage (%)', 'Swap (%)', ['Swap Usage'], ['#f39c12'], yunit='percent'
+            )
+            # Memory GB (used & available)
+            mem_used_gb = [v/(1024**3) for v in memory_used]
+            mem_avail_gb = [v/(1024**3) for v in memory_available]
+            plot_to_label(
+                timestamps, [mem_used_gb, mem_avail_gb], self.memory_gb_chart,
+                'Memory (GB)', 'GB', ['Used', 'Available'], ['#2ecc71', '#95a5a6']
+            )
+            # Status label
             if results:
-                latest = results[-1]  # Last entry (most recent)
-                timestamp = latest[0]
-                cpu_usage = latest[1] or 0
-                memory_percent = latest[2] or 0
-                swap_percent = latest[3] or 0
-                
-                tooltip_text = f"Latest: CPU {cpu_usage:.1f}%, Memory {memory_percent:.1f}%, Swap {swap_percent:.1f}% (Updated: {timestamp})"
-                self.dynamic_chart.setToolTip(tooltip_text)
-                
+                latest = results[-1]
+                tooltip_text = f"Latest: CPU {latest[1] or 0:.1f}%, Mem {latest[2] or 0:.1f}%, Swap {latest[3] or 0:.1f}% (Updated: {latest[0]})"
+                print(tooltip_text)
+                self.status_label.setText(tooltip_text)
         except Exception as e:
-            print(f"Error creating chart: {e}")
-            self.dynamic_chart.setText(f"Error creating chart: {str(e)}")
+            print(f"Error creating charts: {e}")
+            for chart in [self.cpu_chart, self.memory_chart, self.swap_chart, self.memory_gb_chart]:
+                chart.setText(f"Error creating chart: {str(e)}")
 
     def load_alerts(self):
         """Tải danh sách alerts từ database"""
@@ -301,16 +303,25 @@ class CentralServerUI(QWidget):
         
         if results is not None:
             self.alerts_table.setRowCount(0)
-            
             for row_index, row_data in enumerate(results):
                 timestamp = row_data[0]
                 mac_address = row_data[1]
                 alert_type = row_data[2]
                 alert_message = row_data[3]
                 alert_level = row_data[4]
-                
+                # Format time as hh:mm:ss
+                if hasattr(timestamp, 'strftime'):
+                    time_str = timestamp.strftime('%H:%M:%S')
+                else:
+                    # fallback if timestamp is string
+                    import datetime
+                    try:
+                        dt = datetime.datetime.fromisoformat(str(timestamp))
+                        time_str = dt.strftime('%H:%M:%S')
+                    except Exception:
+                        time_str = str(timestamp)
                 self.alerts_table.insertRow(row_index)
-                self.alerts_table.setItem(row_index, 0, QTableWidgetItem(str(timestamp)))
+                self.alerts_table.setItem(row_index, 0, QTableWidgetItem(time_str))
                 self.alerts_table.setItem(row_index, 1, QTableWidgetItem(self.format_mac_address(mac_address)))
                 self.alerts_table.setItem(row_index, 2, QTableWidgetItem(f"{alert_type} ({alert_level})"))
                 self.alerts_table.setItem(row_index, 3, QTableWidgetItem(alert_message))
@@ -332,14 +343,22 @@ class CentralServerUI(QWidget):
         
         if results is not None:
             self.logs_table.setRowCount(0)
-            
             for row_index, row_data in enumerate(results):
                 timestamp = row_data[0]
                 address = row_data[1]
                 log_message = row_data[2]
-                
+                # Format time as hh:mm:ss
+                if hasattr(timestamp, 'strftime'):
+                    time_str = timestamp.strftime('%H:%M:%S')
+                else:
+                    import datetime
+                    try:
+                        dt = datetime.datetime.fromisoformat(str(timestamp))
+                        time_str = dt.strftime('%H:%M:%S')
+                    except Exception:
+                        time_str = str(timestamp)
                 self.logs_table.insertRow(row_index)
-                self.logs_table.setItem(row_index, 0, QTableWidgetItem(str(timestamp)))
+                self.logs_table.setItem(row_index, 0, QTableWidgetItem(time_str))
                 self.logs_table.setItem(row_index, 1, QTableWidgetItem(address))
                 self.logs_table.setItem(row_index, 2, QTableWidgetItem(log_message))
         else:
@@ -347,6 +366,7 @@ class CentralServerUI(QWidget):
 
     def refresh_data(self):
         """Refresh all data"""
+        print("[CentralServerUI] refresh_data called")
         self.load_alerts()
         self.load_server_logs()
         # Refresh static and dynamic info if a MAC is selected
@@ -367,77 +387,66 @@ class CentralServerUI(QWidget):
         result = self.execute_query(query, (mac_address, alert_type, alert_level, alert_message), fetch_all=False)
         return result is not None
 
-    def handle_shutdown(self):
-        """Xử lý lệnh shutdown"""
+    def send_command_to_main_server(self, mac_address, command_type, message=None):
+        """Broadcast lệnh tới tất cả main_server trong danh sách"""
+        command = {
+            "mac_address": mac_address,
+            "command": command_type
+        }
+        if message:
+            command["message"] = message
+        responses = []
+        for server in MAIN_SERVERS:
+            host = server["host"]
+            port = server["port"]
+            try:
+                with socket.create_connection((host, port), timeout=3) as sock:
+                    sock.sendall((json.dumps(command) + "\n").encode('utf-8'))
+                    response = sock.recv(1024).decode('utf-8')
+                    responses.append(f"{host}:{port} => {response}")
+            except Exception as e:
+                responses.append(f"{host}:{port} => Error: {e}")
+        return "\n".join(responses)
+
+    def handle_command(self, command_type):
+        """Xử lý chung cho các lệnh shutdown, restart, notify, AI predict"""
         current_mac = self.mac_selector.currentData()
         if current_mac is None:
             QMessageBox.warning(self, "Warning", "Please select a MAC address first!")
             return
-            
-        reply = QMessageBox.question(self, "Confirm Shutdown", 
-                                   f"Are you sure you want to shutdown the client with MAC: {self.format_mac_address(current_mac)}?")
-        if reply == QMessageBox.StandardButton.Yes:
-            success = self.send_command_to_database(current_mac, "system", "shutdown", "Remote shutdown command from dashboard")
-            if success:
-                QMessageBox.information(self, "Success", f"Shutdown command sent to MAC: {self.format_mac_address(current_mac)}")
-                print(f"Shutdown command sent to MAC: {self.format_mac_address(current_mac)}")
+        mac_str = self.format_mac_address(current_mac)
+        if command_type in ["shutdown", "restart"]:
+            confirm_msg = f"Are you sure you want to {command_type} the client with MAC: {mac_str}?"
+            reply = QMessageBox.question(self, f"Confirm {command_type.capitalize()}", confirm_msg)
+            if reply != QMessageBox.StandardButton.Yes:
+                return
+            response = self.send_command_to_main_server(current_mac, command_type)
+            if response:
+                QMessageBox.information(self, "Success", f"{command_type.capitalize()} command sent to MAC: {mac_str}\nServer response: {response}")
+                print(f"{command_type.capitalize()} command sent to MAC: {mac_str}")
             else:
-                QMessageBox.warning(self, "Error", "Failed to send shutdown command")
-
-    def handle_restart(self):
-        """Xử lý lệnh restart"""
-        current_mac = self.mac_selector.currentData()
-        if current_mac is None:
-            QMessageBox.warning(self, "Warning", "Please select a MAC address first!")
-            return
-            
-        reply = QMessageBox.question(self, "Confirm Restart", 
-                                   f"Are you sure you want to restart the client with MAC: {self.format_mac_address(current_mac)}?")
-        if reply == QMessageBox.StandardButton.Yes:
-            success = self.send_command_to_database(current_mac, "system", "restart", "Remote restart command from dashboard")
-            if success:
-                QMessageBox.information(self, "Success", f"Restart command sent to MAC: {self.format_mac_address(current_mac)}")
-                print(f"Restart command sent to MAC: {self.format_mac_address(current_mac)}")
+                QMessageBox.warning(self, "Error", f"Failed to send {command_type} command to main_server")
+        elif command_type == "notify":
+            text, ok = QInputDialog.getText(self, "Send Notification", f"Enter notification message for {mac_str}:")
+            if not ok or not text.strip():
+                return
+            # Gửi message tới client qua main_server
+            response = self.send_command_to_main_server(current_mac, "notify", message=text.strip())
+            if response:
+                QMessageBox.information(self, "Success", f"Notification sent to MAC: {mac_str}\nServer response: {response}")
+                print(f"Notification sent to MAC: {mac_str}")
             else:
-                QMessageBox.warning(self, "Error", "Failed to send restart command")
-
-    def handle_notify(self):
-        """Xử lý gửi notification"""
-        current_mac = self.mac_selector.currentData()
-        if current_mac is None:
-            QMessageBox.warning(self, "Warning", "Please select a MAC address first!")
-            return
-            
-        success = self.send_command_to_database(current_mac, "notification", "notify", "General notification from dashboard")
-        if success:
-            QMessageBox.information(self, "Success", f"Notification sent to MAC: {self.format_mac_address(current_mac)}")
-            print(f"Notification sent to MAC: {self.format_mac_address(current_mac)}")
-        else:
-            QMessageBox.warning(self, "Error", "Failed to send notification")
-
-    def handle_ai_predict(self):
-        """Xử lý AI prediction"""
-        print("AI prediction feature is not implemented yet.")
-
-    def handle_mac_selected(self, index):
-        """Xử lý khi MAC address được chọn"""
-        mac_data = self.mac_selector.itemData(index)
-        if mac_data is not None:
-            mac_formatted = self.format_mac_address(mac_data)
-            print(f"MAC selected: {mac_formatted}")
-            self.load_static_info(mac_data)
-            self.load_dynamic_info(mac_data)
-        else:
-            self.static_info.setText("No MAC address selected")
-            self.dynamic_chart.setText("(Dynamic charts will be implemented here)")
+                QMessageBox.warning(self, "Error", "Failed to send notification to main_server")
+        elif command_type == "ai_predict":
+            QMessageBox.information(self, "AI Predict", "AI prediction feature is not implemented yet.")
+            print("AI prediction feature is not implemented yet.")
 
     def init_ui(self):
-        """Khởi tạo giao diện người dùng"""
+        """Khởi tạo giao diện người dùng với layout hiện đại, chuyên nghiệp"""
         main_layout = QVBoxLayout(self)
-        
+
         # Top: User Info Bar
         user_info_layout = QHBoxLayout()
-        # Welcome message
         welcome_label = QLabel(f"👤 Welcome, {self.current_user['full_name']} ({self.current_user['username']})")
         welcome_label.setFont(QFont('Arial', 12, QFont.Weight.Bold))
         welcome_label.setStyleSheet("""
@@ -449,10 +458,7 @@ class CentralServerUI(QWidget):
             }
         """)
         user_info_layout.addWidget(welcome_label)
-        
         user_info_layout.addStretch()
-        
-        # Logout button
         logout_btn = QPushButton('🚪 Logout')
         logout_btn.setStyleSheet("""
             QPushButton {
@@ -469,37 +475,37 @@ class CentralServerUI(QWidget):
         """)
         logout_btn.clicked.connect(self.handle_logout)
         user_info_layout.addWidget(logout_btn)
-        
         main_layout.addLayout(user_info_layout)
-        
-        # Main Content Layout
-        content_layout = QHBoxLayout()
 
-        # Left: Command Buttons
-        left_box = QGroupBox('Commands')
-        left_layout = QVBoxLayout()
-        
+        # Main splitter for 3 panels
+        main_splitter = QSplitter(Qt.Orientation.Horizontal)
+
+        # --- Left Panel: Commands & Client Info ---
+        left_panel = QWidget()
+        left_layout = QVBoxLayout(left_panel)
+
+        # Command Buttons
+        commands_box = QGroupBox('Commands')
+        commands_layout = QVBoxLayout()
         self.btn_shutdown = QPushButton('🔴 Shutdown')
         self.btn_restart = QPushButton('🔄 Restart')
         self.btn_notify = QPushButton('📢 Send Notification')
         self.btn_ai_predict = QPushButton('🤖 AI Predict')
-        
         buttons = [
-            (self.btn_shutdown, self.handle_shutdown),
-            (self.btn_restart, self.handle_restart),
-            (self.btn_notify, self.handle_notify),
-            (self.btn_ai_predict, self.handle_ai_predict)
+            (self.btn_shutdown, lambda: self.handle_command("shutdown")),
+            (self.btn_restart, lambda: self.handle_command("restart")),
+            (self.btn_notify, lambda: self.handle_command("notify")),
+            (self.btn_ai_predict, lambda: self.handle_command("ai_predict"))
         ]
-        
         for btn, handler in buttons:
-            btn.setMinimumHeight(50)
+            btn.setMinimumHeight(40)
             btn.setStyleSheet("""
                 QPushButton {
-                    font-size: 14px;
+                    font-size: 13px;
                     font-weight: bold;
                     border: 2px solid #3498db;
                     border-radius: 8px;
-                    padding: 10px;
+                    padding: 8px;
                     background-color: #ecf0f1;
                 }
                 QPushButton:hover {
@@ -510,38 +516,28 @@ class CentralServerUI(QWidget):
                     background-color: #2980b9;
                 }
             """)
-            left_layout.addWidget(btn)
             btn.clicked.connect(handler)
-        
-        left_layout.addStretch()
-        left_box.setLayout(left_layout)
+            commands_layout.addWidget(btn)
+        commands_box.setLayout(commands_layout)
+        left_layout.addWidget(commands_box)
 
-        # Center: Client Info
-        center_box = QGroupBox('Client Information')
-        center_layout = QVBoxLayout()
-        
-        # MAC Selector
+        # Client Info
+        client_info_box = QGroupBox('Client Information')
+        client_info_layout = QVBoxLayout()
         mac_label = QLabel('Select Client:')
-        mac_label.setFont(QFont('Arial', 12, QFont.Weight.Bold))
-        center_layout.addWidget(mac_label)
-        
+        mac_label.setFont(QFont('Arial', 10, QFont.Weight.Bold))
+        client_info_layout.addWidget(mac_label)
         self.mac_selector = QComboBox()
         self.mac_selector.setMinimumHeight(35)
         self.mac_selector.setStyleSheet("""
             QComboBox {
-                font-size: 12px;
+                font-size: 11px;
                 padding: 5px;
                 border: 2px solid #bdc3c7;
                 border-radius: 5px;
             }
         """)
-        center_layout.addWidget(self.mac_selector)
-        
-        # Static Info
-        self.static_label = QLabel('Static Information:')
-        self.static_label.setFont(QFont('Arial', 12, QFont.Weight.Bold))
-        center_layout.addWidget(self.static_label)
-        
+        client_info_layout.addWidget(self.mac_selector)
         self.static_info = QLabel('Select a MAC address to view static information')
         self.static_info.setWordWrap(True)
         self.static_info.setAlignment(Qt.AlignmentFlag.AlignTop)
@@ -551,76 +547,107 @@ class CentralServerUI(QWidget):
                 border-radius: 5px;
                 padding: 10px;
                 background-color: #f8f9fa;
-                min-height: 180px;
+                min-height: 200px;
             }
         """)
-        center_layout.addWidget(self.static_info)
-        
-        # Dynamic Info
-        self.dynamic_label = QLabel('Dynamic Information:')
-        self.dynamic_label.setFont(QFont('Arial', 12, QFont.Weight.Bold))
-        center_layout.addWidget(self.dynamic_label)
-        
-        self.dynamic_chart = QLabel('(Dynamic information will be shown here)')
-        self.dynamic_chart.setAlignment(Qt.AlignmentFlag.AlignTop)
-        self.dynamic_chart.setWordWrap(True)
-        self.dynamic_chart.setStyleSheet("""
-            QLabel {
-                border: 1px solid #bdc3c7;
-                border-radius: 5px;
-                background-color: #f8f9fa;
-                padding: 10px;
-                min-height: 180px;
-            }
-        """)
-        center_layout.addWidget(self.dynamic_chart)
-        
-        center_layout.addStretch()
-        center_box.setLayout(center_layout)
+        client_info_layout.addWidget(self.static_info)
+        client_info_box.setLayout(client_info_layout)
+        left_layout.addWidget(client_info_box)
+        left_layout.addStretch()
+        main_splitter.addWidget(left_panel)
 
-        # Right: Alerts and Server Logs
-        right_box = QGroupBox('Alerts & Server Logs')
-        right_layout = QVBoxLayout()
-        
-        # Alerts
-        self.alerts_label = QLabel('Recent Alerts:')
-        self.alerts_label.setFont(QFont('Arial', 12, QFont.Weight.Bold))
-        right_layout.addWidget(self.alerts_label)
-        
+        # --- Center Panel: Multi-Chart ---
+        center_panel = QWidget()
+        center_layout = QVBoxLayout(center_panel)
+        charts_title = QLabel('Performance Monitoring - Real-time Charts')
+        charts_title.setFont(QFont('Arial', 14, QFont.Weight.Bold))
+        charts_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        charts_title.setStyleSheet("""
+            QLabel {
+                color: #2c3e50;
+                padding: 10px;
+                background-color: #ecf0f1;
+                border-radius: 5px;
+                margin-bottom: 10px;
+            }
+        """)
+        center_layout.addWidget(charts_title)
+        # Thêm các QLabel cho từng loại biểu đồ (bỏ Disk)
+        self.cpu_chart = QLabel('(CPU Usage chart)')
+        self.memory_chart = QLabel('(Memory Usage chart)')
+        self.swap_chart = QLabel('(Swap Usage chart)')
+        self.memory_gb_chart = QLabel('(Memory GB chart)')
+        for chart in [self.cpu_chart, self.memory_chart, self.swap_chart, self.memory_gb_chart]:
+            chart.setAlignment(Qt.AlignmentFlag.AlignTop)
+            chart.setWordWrap(True)
+            chart.setStyleSheet("""
+                QLabel {
+                    border: 1px solid #bdc3c7;
+                    border-radius: 5px;
+                    background-color: #f8f9fa;
+                    padding: 10px;
+                    min-height: 120px;
+                }
+            """)
+            center_layout.addWidget(chart)
+        self.status_label = QLabel("No data available")
+        self.status_label.setFont(QFont('Arial', 10))
+        self.status_label.setStyleSheet("""
+            QLabel {
+                color: #2c3e50;
+                padding: 5px;
+                background-color: #ecf0f1;
+                border-radius: 3px;
+                border: 1px solid #bdc3c7;
+            }
+        """)
+        center_layout.addWidget(self.status_label)
+        center_layout.addStretch()
+        main_splitter.addWidget(center_panel)
+
+        # --- Right Panel: Alerts & Logs ---
+        right_panel = QWidget()
+        right_layout = QVBoxLayout(right_panel)
+        alerts_label = QLabel('Recent Alerts:')
+        alerts_label.setFont(QFont('Arial', 12, QFont.Weight.Bold))
+        right_layout.addWidget(alerts_label)
         self.alerts_table = QTableWidget(0, 4)
         self.alerts_table.setHorizontalHeaderLabels(['Time', 'MAC', 'Type/Level', 'Message'])
         self.alerts_table.horizontalHeader().setStretchLastSection(True)
         self.alerts_table.setAlternatingRowColors(True)
         self.alerts_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         right_layout.addWidget(self.alerts_table)
-        
-        # Server Logs
-        self.logs_label = QLabel('Server Logs:')
-        self.logs_label.setFont(QFont('Arial', 12, QFont.Weight.Bold))
-        right_layout.addWidget(self.logs_label)
-        
+        logs_label = QLabel('Server Logs:')
+        logs_label.setFont(QFont('Arial', 12, QFont.Weight.Bold))
+        right_layout.addWidget(logs_label)
         self.logs_table = QTableWidget(0, 3)
         self.logs_table.setHorizontalHeaderLabels(['Time', 'Address', 'Message'])
         self.logs_table.horizontalHeader().setStretchLastSection(True)
         self.logs_table.setAlternatingRowColors(True)
         self.logs_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         right_layout.addWidget(self.logs_table)
-        right_box.setLayout(right_layout)
+        main_splitter.addWidget(right_panel)
+        main_splitter.setSizes([300, 700, 400])
+        main_layout.addWidget(main_splitter)
 
-        # Add all sections to content layout
-        content_layout.addWidget(left_box, 1)
-        content_layout.addWidget(center_box, 3)
-        content_layout.addWidget(right_box, 2)
-        
-        # Add content layout to main layout
-        main_layout.addLayout(content_layout)
-        
         # Connect signals
         self.mac_selector.currentIndexChanged.connect(self.handle_mac_selected)
-        
         # Load initial data
         self.load_alerts()
         self.load_server_logs()
+
+    def handle_mac_selected(self, index):
+        """Xử lý khi MAC address được chọn"""
+        mac_data = self.mac_selector.itemData(index)
+        if mac_data is not None:
+            mac_formatted = self.format_mac_address(mac_data)
+            print(f"MAC selected: {mac_formatted}")
+            self.load_static_info(mac_data)
+            self.load_dynamic_info(mac_data)
+        else:
+            self.static_info.setText("No MAC address selected")
+            for chart in [self.cpu_chart, self.memory_chart, self.swap_chart, self.memory_gb_chart]:
+                chart.setText("(Dynamic charts will be implemented here)")
 
     def handle_logout(self):
         """Xử lý đăng xuất"""

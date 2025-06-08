@@ -3,6 +3,7 @@ import ssl
 import json
 import threading
 import logging
+import time
 
 import ssl
 import sys
@@ -22,6 +23,7 @@ KEY_PATH = "G:\Projects\Class\Remote_Data_Collection\servers\key.pem"
 HOST = '0.0.0.0'
 parser = argparse.ArgumentParser(description="Run multi-port server")
 parser.add_argument('--port', type=int, default=9999, help='Port to listen on')
+parser.add_argument('--dashboard-port', type=int, default=10000, help='Port for dashboard command server')
 args = parser.parse_args()
 PORT = args.port
 
@@ -115,20 +117,75 @@ def send_command(mac_address, type, command, suggestion=None):
         logging.error(f"Lỗi khi gửi lệnh: {e}")
 
 
+# Mapping MAC address -> client connection
+mac_to_conn = {}
+mac_to_conn_lock = threading.Lock()
+
+# Server nhận lệnh từ dashboard (central_server_ui)
+def dashboard_command_server():
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        s.bind((HOST, args.dashboard_port))
+        s.listen()
+        print(f"[DashboardCmd] Đang lắng nghe dashboard tại {HOST}:{args.dashboard_port}")
+        while True:
+            conn, addr = s.accept()
+            threading.Thread(target=handle_dashboard_command, args=(conn, addr), daemon=True).start()
+
+def handle_dashboard_command(conn, addr):
+    try:
+        data = b""
+        while not data.endswith(b"\n"):
+            chunk = conn.recv(1024)
+            if not chunk:
+                break
+            data += chunk
+        if not data:
+            conn.sendall(b"No data received\n")
+            return
+        try:
+            cmd = json.loads(data.decode('utf-8').strip())
+            mac = cmd.get('mac_address')
+            command = cmd.get('command')
+            message = cmd.get('message')  # Lấy thêm message nếu có
+            if not mac or not command:
+                conn.sendall(b"Missing mac_address or command\n")
+                return
+            # Gửi lệnh tới client
+            with mac_to_conn_lock:
+                client_conn = mac_to_conn.get(mac)
+            if client_conn:
+                try:
+                    # Gửi cả command và message (nếu có) tới client
+                    out = {"command": command}
+                    if message:
+                        out["message"] = message
+                    msg = json.dumps(out) + "\n"
+                    client_conn.sendall(msg.encode('utf-8'))
+                    conn.sendall(f"Command '{command}' sent to client {mac}\n".encode('utf-8'))
+                    logging.info(f"[DashboardCmd] Sent '{command}' to client {mac}")
+                except Exception as e:
+                    conn.sendall(f"Failed to send command to client: {e}\n".encode('utf-8'))
+            else:
+                conn.sendall(f"No client connection found for MAC {mac}\n".encode('utf-8'))
+        except Exception as e:
+            conn.sendall(f"Invalid command: {e}\n".encode('utf-8'))
+    finally:
+        conn.close()
+
 def handle_client(conn, addr):
     client_ip = addr[0]
     logging.info(f"Kết nối từ {client_ip}")
     # static_saved = False
     client_queue.put(conn)  # Đẩy kết nối vào hàng đợi để giao diện sử dụng
+    mac_address = None
     try:
         buffer = ""
         while True:
             data = conn.recv(BUFFER_SIZE).decode('utf-8')
             if not data:
                 logging.warning(f"{client_ip} - Không nhận được dữ liệu")
-                # send_response(conn, "error", "No data received", code=400)
                 return
-
             buffer += data
             while '\n' in buffer:
                 line, buffer = buffer.split('\n', 1)
@@ -138,18 +195,18 @@ def handle_client(conn, addr):
                     logging.warning(f"{client_ip} - JSON không hợp lệ: {line}")
                     send_response(conn, "error", "Invalid JSON format", code=401)
                     continue
-
-
                 payload = json_data.get('payload')
                 if not payload:
                     logging.warning(f"{client_ip} - Thiếu payload")
                     send_response(conn, "error", "Missing payload", code=404)
                     continue
-                
                 mac_address = payload.get("MAC", {}).get("mac_address", "unknown")
                 data_type = payload.get("type", "unknown")
-                check = True
-
+                # Lưu mapping MAC -> conn khi nhận static lần đầu
+                if data_type == "static" and mac_address != "unknown":
+                    with mac_to_conn_lock:
+                        mac_to_conn[mac_address] = conn
+                # ...existing code...
                 if data_type == "static":
                     if not db.has_static_data(mac_address):  
                             print("insert_static_computer_info",payload )
@@ -172,9 +229,7 @@ def handle_client(conn, addr):
                     print("insert_dynamic_computer_info",payload )
                     db.insert_dynamic_computer_info(mac_address, payload)
                     logging.info(f"{client_ip} - Lưu dynamic data thành công")
-                    if check:
-                        send_response(conn, "success", "Data saved successfully", code=200)
-                        check = False
+                    send_response(conn, "success", "Data saved successfully", code=200)
                 
 
                     # Kiểm tra hiệu năng vượt ngưỡng
@@ -248,6 +303,8 @@ def handle_client(conn, addr):
 
 
 def start_server():
+    # Khởi động thread nhận lệnh dashboard
+    threading.Thread(target=dashboard_command_server, daemon=True).start()
     context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
     context.load_cert_chain(certfile=CERT_PATH, keyfile=KEY_PATH)
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:

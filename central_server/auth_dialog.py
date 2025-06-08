@@ -3,7 +3,6 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
 import pymysql
 import hashlib
-import re
 
 
 class AuthDialog(QDialog):
@@ -75,8 +74,8 @@ class AuthDialog(QDialog):
         layout = self.create_form_layout(tab)
         self.login_username = self.create_input_field("Enter your username", layout)
         self.login_password = self.create_input_field("Enter your password", layout, True)
-        self.remember_checkbox = QCheckBox('Remember me')
-        layout.addWidget(self.remember_checkbox)
+        # self.remember_checkbox = QCheckBox('Remember me')
+        # layout.addWidget(self.remember_checkbox)
         self.create_button('🔓 Login', layout, '#27ae60', self.handle_login)
 
     def setup_register_tab(self, tab):
