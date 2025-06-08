@@ -111,21 +111,21 @@ def listen_to_server(client_socket):
             os.system(f'powershell -Command "Add-Type -AssemblyName PresentationFramework; [System.Windows.MessageBox]::Show(\'[ERROR] Có lỗi xảy ra: {error_message}\')"')
         # elif response.get("status") == "success":
         #     os.system(f'powershell -Command "Add-Type -AssemblyName PresentationFramework; [System.Windows.MessageBox]::Show(\'[INFO] Server chấp nhận client info.\')"')
-        elif response.get("command") == "shutdown":
+        elif response.get("alert_level") == "shutdown":
             shutdown_delay = CONFIG["timing"]["shutdown_delay"]
             os.system(f'powershell -Command "Add-Type -AssemblyName PresentationFramework; [System.Windows.MessageBox]::Show(\'[SHUTDOWN] Máy sẽ tắt sau {shutdown_delay} giây.\')"')
             time.sleep(CONFIG["timing"]["shutdown_delay"])
             os.system("shutdown /s /t 0")
-        elif response.get("command") == "restart":
+        elif response.get("alert_level") == "restart":
             restart_delay = CONFIG["timing"]["restart_delay"]
             os.system(f'powershell -Command "Add-Type -AssemblyName PresentationFramework; [System.Windows.MessageBox]::Show(\'[RESTART] Máy sẽ khởi động lại sau {restart_delay} giây.\')"')
             time.sleep(CONFIG["timing"]["restart_delay"])
             os.system("shutdown /r /t 0") 
-        elif response.get("command") == "alert":
-            suggestion_message = response.get("suggestion", "No suggestion")
+        elif response.get("alert_level") == "alert":
+            suggestion_message = response.get("alert_message", "No suggestion")
             os.system(f'powershell -Command "Add-Type -AssemblyName PresentationFramework; [System.Windows.MessageBox]::Show(\'[ALERT] {suggestion_message}\')"')
-        elif response.get("command") == "notify":
-            suggestion_message = response.get("suggestion", "No notification")
+        elif response.get("alert_level") == "notify":
+            suggestion_message = response.get("alert_message", "No notification")
             os.system(f'powershell -Command "Add-Type -AssemblyName PresentationFramework; [System.Windows.MessageBox]::Show(\'[NOTIFY] {suggestion_message}\')"')
     except Exception as e:
         print(f"[LỖI] không nhận được phản hồi hợp lệ từ server: {e}")
