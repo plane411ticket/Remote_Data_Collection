@@ -10,13 +10,17 @@ import io
 import queue
 import os
 import argparse
+from dotenv import load_dotenv
 
+load_dotenv()
 # Set path to the database.py file
-sys.path.append('G:/Projects/Class/Remote_Data_Collection')
+root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.append(root_dir)
+
 from database.database import Database
 
-CERT_PATH = "G:\Projects\Class\Remote_Data_Collection\servers\cert.pem"
-KEY_PATH = "G:\Projects\Class\Remote_Data_Collection\servers\key.pem"
+CERT_PATH = os.getenv("CERT_PATH")
+KEY_PATH = os.getenv("KEY_PATH")
 
 
 HOST = '0.0.0.0'
@@ -30,7 +34,11 @@ PORT = args.port
 # PORT = 9999
 BUFFER_SIZE = 4096
 
-db = Database()
+try:
+    db = Database()
+except Exception as e:
+    print(f"Lỗi khi kết nối đến cơ sở dữ liệu: {e}")
+    sys.exit(1)
 
 # HOST = '0.0.0.0'
 # parser = argparse.ArgumentParser()
@@ -269,25 +277,21 @@ def start_server():
     
             try:
                 ssl_conn = context.wrap_socket(conn, server_side=True)
+                print(f"Handshake TLS thành công với {addr}")
             except ssl.SSLError as e:
-                logging.error(f"Lỗi SSL: {e}")
+                print(f"Lỗi SSL khi handshake với {addr}: {e}")
+                conn.close()
+                continue
+            except ConnectionAbortedError as e:
+                print(f"Kết nối bị abort với {addr}: {e}")
                 conn.close()
                 continue
             
             # Tạo thread riêng cho mỗi client
-            client_thread = threading.Thread(
-                target=handle_client, 
-                args=(ssl_conn, addr),
-                name=f"Client-{addr[0]}:{addr[1]}",
-                daemon=True
-            )
-
-            client_thread.start()
+            threading.Thread(target=handle_client, args=(ssl_conn, addr), daemon=True).start()
 
 if __name__ == "__main__":
     try:
-        
         start_server()
-       
     except KeyboardInterrupt:
         print("Server đã tắt.")
