@@ -1,18 +1,21 @@
-﻿from PySide6.QtWidgets import (
-    QApplication, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, 
-    QLabel, QTableWidget, QTableWidgetItem, QComboBox, QGroupBox,
-    QMessageBox, QSplitter, QInputDialog
-)
-from PySide6.QtCore import Qt, QTimer
-from PySide6.QtGui import QFont, QPixmap
+﻿import io
+import json
+import socket
 import sys
 import pymysql
+import ollama
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_agg import FigureCanvasAgg
-import io
+
+from PySide6.QtCore import Qt, QTimer, QThread, Signal
+from PySide6.QtGui import QFont, QPixmap, QTextOption
+from PySide6.QtWidgets import (
+    QApplication, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, 
+    QLabel, QTableWidget, QTableWidgetItem, QComboBox, QGroupBox,
+    QMessageBox, QSplitter, QInputDialog, QLineEdit, QScrollBar, QTextEdit
+)
+
 from auth_dialog import AuthDialog
-import socket
-import json
 
 # Danh sách các main_server (broadcast tới tất cả)
 MAIN_SERVERS = [
@@ -21,6 +24,21 @@ MAIN_SERVERS = [
     # {"host": "192.168.1.102", "port": 10000},
 ]
 
+
+class OllamaChatThread(QThread):
+    finished = Signal(str)  # Signal để gửi kết quả trả về UI
+
+    def __init__(self, user_message):
+        super().__init__()
+        self.user_message = user_message
+
+    def run(self):
+        try:
+            response = ollama.chat(model='llama3.2:3b', messages=[{"role": "user", "content": self.user_message}])
+            bot_reply = response['message']['content'] if 'message' in response and 'content' in response['message'] else str(response)
+        except Exception as e:
+            bot_reply = f"[Error] {e}"
+        self.finished.emit(bot_reply)
 
 class CentralServerUI(QWidget):
     def __init__(self):
@@ -281,7 +299,7 @@ class CentralServerUI(QWidget):
             if results:
                 latest = results[-1]
                 tooltip_text = f"Latest: CPU {latest[1] or 0:.1f}%, Mem {latest[2] or 0:.1f}%, Swap {latest[3] or 0:.1f}% (Updated: {latest[0]})"
-                print(tooltip_text)
+                # print(tooltip_text)
                 self.status_label.setText(tooltip_text)
         except Exception as e:
             print(f"Error creating charts: {e}")
@@ -366,7 +384,6 @@ class CentralServerUI(QWidget):
 
     def refresh_data(self):
         """Refresh all data"""
-        print("[CentralServerUI] refresh_data called")
         self.load_alerts()
         self.load_server_logs()
         # Refresh static and dynamic info if a MAC is selected
@@ -553,6 +570,50 @@ class CentralServerUI(QWidget):
         client_info_layout.addWidget(self.static_info)
         client_info_box.setLayout(client_info_layout)
         left_layout.addWidget(client_info_box)
+
+        # --- Chat with Ollama Chatbot ---
+        chat_box = QGroupBox('Chat with Ollama')
+        chat_layout = QVBoxLayout()
+        self.chat_history = QTextEdit()
+        self.chat_history.setReadOnly(True)
+        self.chat_history.setWordWrapMode(QTextOption.WrapAtWordBoundaryOrAnywhere)
+        self.chat_history.setStyleSheet("""
+            QTextEdit {
+                border: 1px solid #bdc3c7;
+                border-radius: 5px;
+                padding: 8px;
+                background-color: #f8f9fa;
+                min-height: 80px;
+                max-height: 120px;
+            }
+        """)
+        self.chat_history.setText('')
+        chat_layout.addWidget(self.chat_history)
+        chat_input_layout = QHBoxLayout()
+        self.chat_input = QLineEdit()
+        self.chat_input.setPlaceholderText('Type your message to Ollama...')
+        self.chat_input.setMinimumHeight(30)
+        chat_input_layout.addWidget(self.chat_input)
+        self.send_chat_btn = QPushButton('Send')
+        self.send_chat_btn.setMinimumHeight(30)
+        self.send_chat_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #27ae60;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                font-weight: bold;
+                padding: 6px 15px;
+            }
+            QPushButton:hover {
+                background-color: #219150;
+            }
+        """)
+        self.send_chat_btn.clicked.connect(self.handle_send_chat)
+        chat_input_layout.addWidget(self.send_chat_btn)
+        chat_layout.addLayout(chat_input_layout)
+        chat_box.setLayout(chat_layout)
+        left_layout.addWidget(chat_box)
         left_layout.addStretch()
         main_splitter.addWidget(left_panel)
 
@@ -666,6 +727,27 @@ class CentralServerUI(QWidget):
             self.db_connection.close()
             print("✅ Database connection closed")
         event.accept()
+
+    def handle_send_chat(self):
+        """Gửi tin nhắn tới Ollama chatbot trên thread khác và hiển thị phản hồi"""
+        user_message = self.chat_input.text().strip()
+        if not user_message:
+            return
+        self.chat_input.setDisabled(True)
+        self.send_chat_btn.setDisabled(True)
+        self.chat_history.append(f"<b>You:</b> {user_message}<br>")
+        # Tạo thread mới để gọi ollama
+        self.ollama_thread = OllamaChatThread(user_message)
+        self.ollama_thread.finished.connect(self.display_ollama_response)
+        self.ollama_thread.start()
+
+    def display_ollama_response(self, bot_reply):
+        self.chat_history.append(f"<b>Ollama:</b> {bot_reply}<br>")
+        self.chat_input.clear()
+        self.chat_input.setDisabled(False)
+        self.send_chat_btn.setDisabled(False)
+        self.chat_input.setFocus()
+        self.chat_history.verticalScrollBar().setValue(self.chat_history.verticalScrollBar().maximum())
 
 
 if __name__ == '__main__':

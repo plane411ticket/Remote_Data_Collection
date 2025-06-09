@@ -241,7 +241,7 @@ def handle_client(conn, addr):
                 
 
                     # Kiểm tra hiệu năng vượt ngưỡng
-                    cpu = payload.get("cpu", {}).get("usage_percent", 0)
+                    cpu = payload.get("cpu", {}).get("cpu_usage", 0)
                        
                     if cpu > 90:
                         send_command(conn, mac_address, type="cpu", command="shutdown", suggestion="Cảnh báo: CPU đang quá tải, Cần shutdown máy!")

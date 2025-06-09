@@ -22,7 +22,7 @@ class AuthDialog(QDialog):
                 host="localhost", 
                 port=3306, 
                 user="root", 
-                password="", 
+                password="3a0M1n4@gahoasoi", 
                 database="remote_collection", 
                 charset='utf8mb4', 
                 autocommit=True
