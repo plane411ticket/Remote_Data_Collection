@@ -107,6 +107,8 @@ def handle_client(client_socket):
             raw_sock.connect(server_addr)
             server_socket = context_to_server.wrap_socket(raw_sock, server_hostname=server_addr[0])
 
+            connected = True
+
             # Tạo 2 thread chuyển tiếp dữ liệu 2 chiều
             threading.Thread(target=forward_data, args=(client_socket, server_socket), daemon=True).start()
             threading.Thread(target=forward_data, args=(server_socket, client_socket), daemon=True).start()
