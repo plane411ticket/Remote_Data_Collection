@@ -9,8 +9,10 @@ import os
 
 CONFIG = {
     "server": {
-        "ip": "127.0.0.1",
-        "port": 9500
+        "ip": "0.tcp.ap.ngrok.io",
+        "port": 18993
+        # "ip": "127.0.0.1",
+        # "port": 9500
     },
     "timing": {
         "dynamic_info_interval": 5,

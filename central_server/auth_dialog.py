@@ -3,7 +3,10 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
 import pymysql
 import hashlib
+import os
+from dotenv import load_dotenv
 
+load_dotenv()
 
 class AuthDialog(QDialog):
     def __init__(self):
@@ -19,13 +22,13 @@ class AuthDialog(QDialog):
         """Initialize database connection."""
         try:
             self.db_connection = pymysql.connect(
-                host="localhost", 
-                port=3306, 
-                user="root", 
-                password="", 
-                database="remote_collection", 
-                charset='utf8mb4', 
-                autocommit=True
+                host=os.getenv("DB_HOST", "localhost"),
+                port=int(os.getenv("DB_PORT", 3306)),
+                user=os.getenv("DB_USER", "root"),
+                password=os.getenv("DB_PASSWORD", ""),
+                database="remote_collection",
+                charset=os.getenv("DB_CHARSET", "utf8mb4"),
+                autocommit=os.getenv("DB_AUTOCOMMIT", "True").lower() in ("true", "1", "yes")
             )
             print("✅ Auth Dialog connected to database successfully!")
         except pymysql.Error as e:

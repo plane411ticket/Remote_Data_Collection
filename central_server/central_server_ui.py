@@ -6,6 +6,8 @@ import pymysql
 import ollama
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_agg import FigureCanvasAgg
+import os
+from dotenv import load_dotenv
 
 from PySide6.QtCore import Qt, QTimer, QThread, Signal
 from PySide6.QtGui import QFont, QPixmap, QTextOption
@@ -16,6 +18,8 @@ from PySide6.QtWidgets import (
 )
 
 from auth_dialog import AuthDialog
+
+load_dotenv()
 
 # Danh sách các main_server (broadcast tới tất cả)
 MAIN_SERVERS = [
@@ -70,13 +74,13 @@ class CentralServerUI(QWidget):
             # Get user info from database
             try:
                 temp_connection = pymysql.connect(
-                    host="localhost",
-                    port=3306,
-                    user="root",
-                    password="",
+                    host=os.getenv("DB_HOST", "localhost"),
+                    port=int(os.getenv("DB_PORT", 3306)),
+                    user=os.getenv("DB_USER", "root"),
+                    password=os.getenv("DB_PASSWORD", ""),
                     database="remote_collection",
-                    charset='utf8mb4',
-                    autocommit=True
+                    charset=os.getenv("DB_CHARSET", "utf8mb4"),
+                    autocommit=os.getenv("DB_AUTOCOMMIT", "True").lower() in ("true", "1", "yes")
                 )
                 cursor = temp_connection.cursor()
                 cursor.execute("""
@@ -105,13 +109,13 @@ class CentralServerUI(QWidget):
         """Khởi tạo kết nối database bằng pymysql"""
         try:
             self.db_connection = pymysql.connect(
-                host="localhost",
-                port=3306,
-                user="root",
-                password="nndd411",
+                host=os.getenv("DB_HOST", "localhost"),
+                port=int(os.getenv("DB_PORT", 3306)),
+                user=os.getenv("DB_USER", "root"),
+                password=os.getenv("DB_PASSWORD", ""),
                 database="remote_collection",
-                charset='utf8mb4',
-                autocommit=True
+                charset=os.getenv("DB_CHARSET", "utf8mb4"),
+                autocommit=os.getenv("DB_AUTOCOMMIT", "True").lower() in ("true", "1", "yes")
             )
             print("✅ Connected to database successfully using pymysql!")
         except pymysql.Error as e:
@@ -135,26 +139,28 @@ class CentralServerUI(QWidget):
             print(f"Database error: {e}")
             return None
 
-    def load_mac_addresses(self):
-        """Tải danh sách địa chỉ MAC từ database"""
+    def load_mac_addresses(self, keep_selection=None):
+        """Tải danh sách địa chỉ MAC từ database, giữ lại lựa chọn hiện tại nếu có"""
         if not self.db_connection:
             return
-            
         query = "SELECT DISTINCT mac_address FROM static_info ORDER BY mac_address"
         results = self.execute_query(query)
-        
         if results is not None:
+            self.mac_selector.blockSignals(True)
+            current_index = -1
             self.mac_selector.clear()
             self.mac_selector.addItem("Select MAC Address", None)
-            
-            for row in results:
+            for idx, row in enumerate(results, start=1):
                 mac_address = row[0]
-                # Convert MAC address from BIGINT to readable format
                 mac_formatted = self.format_mac_address(mac_address)
                 self.mac_selector.addItem(mac_formatted, mac_address)
+                if keep_selection is not None and mac_address == keep_selection:
+                    current_index = idx
+            if current_index != -1:
+                self.mac_selector.setCurrentIndex(current_index)
+            self.mac_selector.blockSignals(False)
         else:
-            QMessageBox.warning(self, "Query Error", 
-                              "Failed to load MAC addresses from database")
+            QMessageBox.warning(self, "Query Error", "Failed to load MAC addresses from database")
 
     def format_mac_address(self, mac_int):
         """Chuyển đổi MAC address từ BIGINT sang định dạng readable"""
@@ -384,13 +390,15 @@ class CentralServerUI(QWidget):
 
     def refresh_data(self):
         """Refresh all data"""
+        # Lưu lại lựa chọn MAC hiện tại
+        current_mac = self.mac_selector.currentData()
+        self.load_mac_addresses(keep_selection=current_mac)
         self.load_alerts()
         self.load_server_logs()
-        # Refresh static and dynamic info if a MAC is selected
-        current_data = self.mac_selector.currentData()
-        if current_data is not None:
-            self.load_static_info(current_data)
-            self.load_dynamic_info(current_data)
+        # Refresh static and dynamic info nếu có MAC được chọn
+        if current_mac is not None:
+            self.load_static_info(current_mac)
+            self.load_dynamic_info(current_mac)
 
     def send_command_to_database(self, mac_address, alert_type, alert_level, alert_message):
         """Gửi lệnh vào database (alerts table)"""
